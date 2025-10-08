@@ -1,0 +1,59 @@
+-- Workspace: JERSALUD
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9c6eaf45-9b46-445f-bd43-868d6c10c562
+-- Schema: ViewInternal
+-- Object: VW_IND_PNQX_ORDENADOS_TRIMESTRAL
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE VIEW [ViewInternal].[VW_IND_PNQX_ORDENADOS_TRIMESTRAL]
+AS
+--SELECT COUNT(*) FROM [ViewInternal].[VW_IND_PNQX_ORDENADOS_TRIMESTRAL]
+SELECT DISTINCT   
+ PNQ.FECORDMED AS FechaOrden, 
+ PNQ.IPCODPACI AS Documento, 
+ P.IPNOMCOMP AS Paciente, 
+ P.IPDIRECCI AS Direccion, 
+ P.IPTELEFON AS Fijo, 
+ P.IPTELMOVI AS Celular, 
+ --CONVERT(varchar(10), P.IPFECNACI, 101) AS FechaNacimient,
+ P.IPFECNACI AS FechaNacimient,
+ CAST(DATEDIFF(dd, P.IPFECNACI, GETDATE()) / 365.25 AS int) AS EDAD, 
+ PNQ.NUMINGRES AS Ingreso, 
+ CA.NOMCENATE AS CentroAtencion, 
+ U.UFUDESCRI AS Unidad, 
+ PNQ.CODPROSAL AS CodProfesional,   
+ PROF.NOMMEDICO AS Profesional, 
+ PNQ.CODSERIPS AS CUPS, 
+ C.DESSERIPS AS Servicio, 
+ PNQ.CANSERIPS AS Cant, 
+ PNQ.CODDIAGNO AS Cie10, 
+ Dx.NOMDIAGNO AS Diagnostico,
+ PNQ.OBSSERIPS AS Observación,
+  CASE 
+	when PNQ.OBSSERIPS like '%transcripcion%' then 'Si'  
+	when PNQ.OBSSERIPS like '%red externa%' then 'Si'  
+	when PNQ.OBSSERIPS like '%reformulacion%' then 'Si'  
+	when PNQ.OBSSERIPS like '%especialista%' then 'Si'  
+	else 'No'
+ END AS Red_Externa,
+
+ CASE 
+		when PNQ.OBSSERIPS like '%Renova%' then 'Si'  
+		when PNQ.OBSSERIPS like '%transcrip%' then 'Si'  
+		when PNQ.OBSSERIPS like '%Cambio de orden%' then 'Si'  
+		else 'No' 
+ END AS Orden_Por_Transcripcion
+
+FROM INDIGO031.dbo.HCORDPRON AS PNQ 
+INNER JOIN INDIGO031.dbo.INPACIENT AS P ON P.IPCODPACI = PNQ.IPCODPACI 
+INNER JOIN INDIGO031.dbo.INCUPSIPS AS C ON C.CODSERIPS = PNQ.CODSERIPS 
+INNER JOIN INDIGO031.dbo.INPROFSAL AS PROF ON PNQ.CODPROSAL = PROF.CODPROSAL 
+INNER JOIN INDIGO031.dbo.ADCENATEN AS CA ON CA.CODCENATE = PNQ.CODCENATE 
+INNER JOIN INDIGO031.dbo.INUNIFUNC AS U ON U.UFUCODIGO = PNQ.UFUCODIGO 
+INNER JOIN INDIGO031.dbo.INDIAGNOS AS Dx ON PNQ.CODDIAGNO = Dx.CODDIAGNO  
+
+WHERE PNQ.FECORDMED >= DATEADD(MONTH, -3, GETDATE())   
+
