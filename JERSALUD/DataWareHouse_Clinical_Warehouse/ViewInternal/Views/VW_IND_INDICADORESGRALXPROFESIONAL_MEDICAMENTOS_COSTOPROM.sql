@@ -1,0 +1,38 @@
+-- Workspace: JERSALUD
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9c6eaf45-9b46-445f-bd43-868d6c10c562
+-- Schema: ViewInternal
+-- Object: VW_IND_INDICADORESGRALXPROFESIONAL_MEDICAMENTOS_COSTOPROM
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW ViewInternal.VW_IND_INDICADORESGRALXPROFESIONAL_MEDICAMENTOS_COSTOPROM 
+as
+    SELECT 'Medicamentos' AS Tipo, 
+            CA.NOMCENATE AS Sede, prof.CODPROSAL, prof.NOMMEDICO as Medico, ESP.DESESPECI as Profesion,
+        CASE
+                WHEN CA.CODCENATE IN(002, 003, 004, 005, 006, 007, 008, 009,017,021)
+                THEN 'BOYACA'
+                WHEN CA.CODCENATE IN(010, 011, 012, 013, 014,018)
+                THEN 'META'
+                WHEN CA.CODCENATE IN (015,016,019,020)
+                THEN 'CASANARE'
+            END AS Regional,
+            MONTH(OM.FECINIDOS) AS Mes, 
+            YEAR(OM.FECINIDOS) AS Año, 
+           
+			OM.NUMINGRES as Ingreso,
+			OM.CODPRODUC as Producto,
+			M.DESPRODUC,
+			--tt.code,
+			--tt.name,
+			--tt.total,
+			OM.CANPEDPRO
+			--* TT.total AS VrTotal
+    FROM [INDIGO031].[dbo].[HCPRESCRA] OM 
+    JOIN [INDIGO031].[dbo].[IHLISTPRO] M ON OM.CODPRODUC = M.CODPRODUC
+    JOIN [INDIGO031].[dbo].[ADCENATEN] CA ON OM.CODCENATE = CA.CODCENATE
+	JOIN [INDIGO031].[dbo].[INPROFSAL] prof on OM.CODPROSAL = prof.CODPROSAL
+	JOIN [INDIGO031].[dbo].[INESPECIA] ESP ON prof.CODESPEC1 = ESP.CODESPECI
+		
+    WHERE M.TIPPRODUC = 1 AND OM.FECINIDOS >= '01-01-2022'  AND OM.NUMINGRES+NUMEFOLIO NOT IN (SELECT NUMINGRES+NUMEFOLIO
+										FROM [INDIGO031].[dbo].[HCFOLANUL])  and OM.IPCODPACI not in ('1234567', '12345678', '14141414','9999999')

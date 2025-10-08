@@ -1,0 +1,71 @@
+-- Workspace: HOMI
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9e4ad354-8031-4a13-8643-33b3234761ff
+-- Schema: Report
+-- Object: SP_ORDENESPATOLOGIA
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE PROCEDURE Report.SP_ORDENESPATOLOGIA
+    @FechaInicio DATE,
+    @FechaFin DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        A.NUMEFOLIO AS FOLIO,
+        A.IPCODPACI AS IDENTIFICACION,
+        A.NUMINGRES AS INGRESO,
+        A.CODPROSAL AS CODIGO_PROFESIONAL_ORD,
+        C.NOMMEDICO AS PROFESIONAL_ORD,
+        A.FECORDMED AS FEC_SOLICITUD_ORD,
+        B.Description AS PROCEDIMIENTO,
+        A.CANSERIPS AS CANTIDAD_SERVICIO,
+        CASE A.ESTSERIPS
+            WHEN 1 THEN 'Solicitado'
+            WHEN 2 THEN 'Muestra Recolectada'
+            WHEN 3 THEN 'Resultado Entregado'
+            WHEN 4 THEN 'Examen Interpretado'
+            WHEN 5 THEN 'Remitido'
+            WHEN 6 THEN 'Anulado'
+            WHEN 7 THEN 'Extramural'
+        END AS ESTADO_SERVICIO,
+        A.CODDIAGNO AS COD_DIAGNOSTICO,
+        D.NOMDIAGNO AS DIAGNOSTICO,
+        A.FECRECEXA AS FEC_REGISTRO,
+        A.FECRECEPMUES AS FEC_RECEPCION,
+        A.USURECEXA AS CODIGO_USUARIO_CREA_REGISTRO,
+        E.NOMUSUARI AS NOMBRE_USUARIO_CREA_REGISTRO,
+        E.DESCARUSU
+    FROM
+        INDIGO036.dbo.HCORDPATO A
+    LEFT JOIN
+        INDIGO036.Contract.CUPSEntity B ON B.Code = A.CODSERIPS
+    LEFT JOIN
+        INDIGO036.dbo.INPROFSAL C ON A.CODPROSAL = C.CODPROSAL
+    LEFT JOIN
+        INDIGO036.dbo.SEGusuaru E ON A.USURECEXA = E.CODUSUARI
+    LEFT JOIN
+        INDIGO036.dbo.INDIAGNOS D ON D.CODDIAGNO = A.CODDIAGNO
+    LEFT JOIN
+        INDIGO036.dbo.SEGusuaru F ON A.USURECEXA = E.CODUSUARI
+    WHERE
+        A.FECORDMED BETWEEN @FechaInicio AND @FechaFin
+    GROUP BY
+        A.NUMEFOLIO,
+        A.IPCODPACI,
+        A.NUMINGRES,
+        A.CODPROSAL,
+        C.NOMMEDICO,
+        A.FECORDMED,
+        B.Description,
+        A.CANSERIPS,
+        A.ESTSERIPS,
+        A.CODDIAGNO,
+        D.NOMDIAGNO,
+        A.FECRECEXA,
+        A.FECRECEPMUES,
+        A.USURECEXA,
+        E.NOMUSUARI,
+        E.DESCARUSU;
+END;

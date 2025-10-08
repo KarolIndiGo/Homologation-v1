@@ -1,0 +1,252 @@
+-- Workspace: HOMI
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9e4ad354-8031-4a13-8643-33b3234761ff
+-- Schema: Report
+-- Object: VW_VIEWMEDICAMENTOSMANEJOHISTORICO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE   VIEW [Report].[VW_VIEWMEDICAMENTOSMANEJOHISTORICO] as
+
+WITH CTE_MEDICAMENTOS AS (
+    SELECT
+        'MEDICAMENTOS' AS 'TIPO ORDENAMIENTO',
+        RTRIM(UFU.UFUDESCRI) AS [UNIDAD FUNCIONAL INICIAL SOLICITUD],
+        HEA.Code AS 'CODIGO ENTIDAD',
+        HEA.Name AS 'ENTIDAD',
+        CGR.Name AS 'GRUPO DE ATENCION',
+        CAST(PRE.FECINIDOS AS DATE) AS [FECHA HISTORIA],
+        PRE.NUMEFOLIO AS [FOLIO],
+        RTRIM(PRE.IPCODPACI) AS [IDENTIFICACION],
+        RTRIM(PAC.IPNOMCOMP) AS [PACIENTE],
+        PRE.NUMINGRES AS [INGRESO],
+        RTRIM(PRE.CODPROSAL) + ' - ' + RTRIM(SAL.NOMMEDICO) AS [PROFESIONAL DE SALUD],
+        RTRIM(PRE.CODPRODUC) AS [CODIGO MEDICAMENTO],
+        RTRIM(PRO.DESPRODUC) AS [MEDICAMENTO],
+        RTRIM(PRO.CONCENMED) AS [CONCETRACION],
+        RTRIM(VIA.DESVIAADM) AS [VIA ADMINISTRACION],
+        RTRIM(FME.DESFORMED) AS [PRESENTACION],
+        ISNULL(PRE.DOSISPROD, PRE.DOSISPRFN) AS [DOSIS SOLICITADA],
+        UNI.DESUNIMED AS [UNIDAD],
+        PRE.DURACIDOS AS [DURACION],
+        RTRIM(PRE.DESADMINI) AS [DESCRIPCION ADMINISTRACION],
+        RTRIM(PRE.CODDIAGNO) + ' - ' + RTRIM(DIA.NOMDIAGNO) AS [DIAGNOSTICO],
+        CASE
+            ESTADIO
+            WHEN 0 THEN 'estadio clínico (ec) 0 (tumor in situ)'
+            WHEN 1 THEN 'ec I o 1'
+            WHEN 2 THEN 'ec IA o 1A'
+            WHEN 3 THEN 'ec IA1'
+            WHEN 4 THEN 'ec IA2'
+            WHEN 5 THEN 'ec IB o 1b'
+            WHEN 6 THEN 'ec IB1'
+            WHEN 7 THEN 'ec IB2'
+            WHEN 8 THEN 'ec IC o 1c'
+            WHEN 9 THEN 'ec IS o 1s'
+            WHEN 10 THEN 'ec II o 2'
+            WHEN 11 THEN 'ec IIA o 2a'
+            WHEN 12 THEN 'ec IIA1'
+            WHEN 13 THEN 'ec IIA2'
+            WHEN 14 THEN 'ec IIB o 2b'
+            WHEN 15 THEN 'ec IIC o 2c'
+            WHEN 16 THEN 'ec III o 3'
+            WHEN 17 THEN 'ec IIIA o 3a'
+            WHEN 18 THEN 'ec IIIB o 3b'
+            WHEN 19 THEN 'ec IIIC o 3c'
+            WHEN 20 THEN 'ec IV o 4'
+            WHEN 21 THEN 'ec IVA o 4a'
+            WHEN 22 THEN 'ec IVB o 4b'
+            WHEN 23 THEN 'ec IVC o 4c'
+            WHEN 24 THEN 'ec 4S (para neuroblastoma)'
+            WHEN 25 THEN 'ec  V o 5'
+            WHEN 26 THEN 'ec Estadio IAB'
+            WHEN 55 THEN 'Persona con aseguramiento (régimen subsidiado o contributivo y que no son PPNA) que recibió servicios de salud por parte del ente territorialdurante el periodo de reporte'
+            WHEN 93 THEN 'Sin información de estadificación en historia clínica'
+            WHEN 98 THEN 'No Aplica (Es cáncer de piel basocelular, es cáncer hematológico o es cáncer en SNC, excepto neuroblastoma)'
+            WHEN 99 THEN 'Desconocido, el dato de esta variable no se encuentra descrito en los soportes clínicos'
+            ELSE ''
+        END AS ESTADIO,
+        PRE.INDAPLMED AS [INDICACIONES DE ADMINISTRACION],
+        PRE.MOTSUSMED AS [MOTIVO DE SUSPENCION],
+        CASE
+            PRE.MANEXTPRO
+            WHEN 0 THEN 'INTRAHOSPITALARIO'
+            ELSE 'EXTERNO'
+        END AS [TIPO SOLICITUD],
+        PRE.CANPEDPRO AS [CANTIDAD MEDICAMENTO],
+        ESQ.Code + ' - ' + ESQ.Description AS [ESQUEMA],
+        CASE
+            PRE.MEDICACUSTODIA
+            WHEN 1 THEN 'SI'
+            ELSE 'NO'
+        END AS [CUSTODIA],
+        CASE
+            WHEN ATC.POSProduct = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'INCLUIDO EN PBS',
+        CASE
+            WHEN ATC.Conditioned = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'MEDICAMENTO CONDICIONADO',
+        CASE
+            WHEN ATC.UNIRS = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'MEDICAMENTO UNIRS',
+        CASE
+            PRE.PREESTADO
+            WHEN 1 THEN 'Iniciado: Cuando el Medicamento se Solicita por Primera Vez'
+            WHEN 2 THEN 'Ciclo Completado'
+            WHEN 3 THEN 'Tratamiento descontinuado: Cuando existe una modificacion en la Dosificacion, Duracion o Frecuencia'
+            WHEN 4 THEN 'Tratamiento Suspendido: Cuando el Medicamento es Suspendido'
+            WHEN 5 THEN 'Plan de Manejo Externo: Cuando los Medicamentos son entregados por un Tercero'
+            WHEN 6 THEN 'Medicamentos Solicitados sin Existencia Actual en el Kardex'
+            WHEN 7 THEN 'Tratamiento Terminado por Salida del Paciente'
+        END AS 'ESTADO MEDICAMENTO',
+        CAST(ING.IFECHAING AS DATE) AS 'Fecha Ingreso'
+    FROM
+        INDIGO036.dbo.HCPRESCRA PRE
+        INNER JOIN INDIGO036.dbo.HCPRESCRD AS DET ON PRE.CODCONCEC = DET.CODCONCEC
+            AND PRE.CODPRODUC = DET.CODPRODUC
+        INNER JOIN INDIGO036.dbo.INPACIENT AS PAC ON PAC.IPCODPACI = PRE.IPCODPACI
+        INNER JOIN INDIGO036.dbo.ADINGRESO AS ING ON PRE.NUMINGRES = ING.NUMINGRES
+        INNER JOIN INDIGO036.dbo.INUNIFUNC AS UFU ON PRE.UFUCODIGO = UFU.UFUCODIGO
+        INNER JOIN INDIGO036.dbo.INPROFSAL AS SAL ON PRE.CODPROSAL = SAL.CODPROSAL
+        INNER JOIN INDIGO036.dbo.IHLISTPRO AS PRO ON PRE.CODPRODUC = PRO.CODPRODUC
+        INNER JOIN INDIGO036.Inventory.ATC AS ATC ON PRO.CODPRODUC = ATC.Code
+        INNER JOIN INDIGO036.dbo.HCVIAADMI AS VIA ON PRE.CODVIAADM = VIA.CODVIAADM
+        INNER JOIN INDIGO036.dbo.IHFORMEDI AS FME ON PRE.CODFORMED = FME.CODFORMED
+        INNER JOIN INDIGO036.Contract.HealthAdministrator HEA ON ING.GENCONENTITY = HEA.Id
+        INNER JOIN INDIGO036.Contract.CareGroup AS CGR ON ING.GENCAREGROUP = CGR.Id
+        INNER JOIN INDIGO036.dbo.INDIAGNOS AS DIA ON PRE.CODDIAGNO = DIA.CODDIAGNO
+        INNER JOIN INDIGO036.dbo.INDIAGNOP AS EST ON PRE.IPCODPACI = EST.IPCODPACI
+            AND PRE.NUMINGRES = EST.NUMINGRES
+        LEFT JOIN INDIGO036.dbo.INUNIMEDI AS UNI ON ISNULL(PRE.CODUNIMED, PRE.CODUNIMFN) = UNI.CODUNIMED
+        LEFT JOIN INDIGO036.EHR.Schemes AS ESQ ON PRE.IDESQUEMAONC = ESQ.Id
+),
+CTE_MEZCLAS AS (
+    SELECT
+        'MEZCLAS Y LIQUIDOS' AS 'TIPO ORDENAMIENTO',
+        RTRIM(UFU.UFUDESCRI) AS [UNIDAD FUNCIONAL INICIAL SOLICITUD],
+        HEA.Code AS 'CODIGO ENTIDAD',
+        HEA.Name AS 'ENTIDAD',
+        CGR.Name AS 'GRUPO DE ATENCION',
+        CAST(MEZ.FECHAINIC AS DATE) AS [FECHA HISTORIA],
+        MEZ.NUMEFOLIO AS [FOLIO],
+        RTRIM(MEZ.IPCODPACI) AS [IDENTIFICACION],
+        RTRIM(PAC.IPNOMCOMP) AS [PACIENTE],
+        MEZ.NUMINGRES AS [INGRESO],
+        RTRIM(MEZ.CODPROSAL) + ' - ' + RTRIM(SAL.NOMMEDICO) AS [PROFESIONAL DE SALUD],
+        RTRIM(ISNULL(MED.CODPRODUC, LIQ.CODPRODUC)) AS [CODIGO MEDICAMENTO],
+        RTRIM(PRO.DESPRODUC) AS [MEDICAMENTO],
+        RTRIM(PRO.CONCENMED) AS [CONCETRACION],
+        RTRIM(VIA.DESVIAADM) AS [VIA ADMINISTRACION],
+        RTRIM(FME.DESFORMED) AS [PRESENTACION],
+        ISNULL(MED.CONMEDMEZ, LIQ.DOSISBOLO) AS [DOSIS SOLICITADA],
+        RTRIM(UNI.DESUNIMED) AS [UNIDAD],
+        'Tratamiento continuo' AS [DURACION],
+        RTRIM(MEZ.MEZLIQPAC) AS [DESCRIPCION ADMINISTRACION],
+        RTRIM(MEZ.CODDIAGNO) + ' - ' + RTRIM(DIA.NOMDIAGNO) AS [DIAGNOSTICO],
+        CASE
+            ESTADIO
+            WHEN 0 THEN 'estadio clínico (ec) 0 (tumor in situ)'
+            WHEN 1 THEN 'ec I o 1'
+            WHEN 2 THEN 'ec IA o 1A'
+            WHEN 3 THEN 'ec IA1'
+            WHEN 4 THEN 'ec IA2'
+            WHEN 5 THEN 'ec IB o 1b'
+            WHEN 6 THEN 'ec IB1'
+            WHEN 7 THEN 'ec IB2'
+            WHEN 8 THEN 'ec IC o 1c'
+            WHEN 9 THEN 'ec IS o 1s'
+            WHEN 10 THEN 'ec II o 2'
+            WHEN 11 THEN 'ec IIA o 2a'
+            WHEN 12 THEN 'ec IIA1'
+            WHEN 13 THEN 'ec IIA2'
+            WHEN 14 THEN 'ec IIB o 2b'
+            WHEN 15 THEN 'ec IIC o 2c'
+            WHEN 16 THEN 'ec III o 3'
+            WHEN 17 THEN 'ec IIIA o 3a'
+            WHEN 18 THEN 'ec IIIB o 3b'
+            WHEN 19 THEN 'ec IIIC o 3c'
+            WHEN 20 THEN 'ec IV o 4'
+            WHEN 21 THEN 'ec IVA o 4a'
+            WHEN 22 THEN 'ec IVB o 4b'
+            WHEN 23 THEN 'ec IVC o 4c'
+            WHEN 24 THEN 'ec 4S (para neuroblastoma)'
+            WHEN 25 THEN 'ec  V o 5'
+            WHEN 26 THEN 'ec Estadio IAB'
+            WHEN 55 THEN 'Persona con aseguramiento (régimen subsidiado o contributivo y que no son PPNA) que recibió servicios de salud por parte del ente territorialdurante el periodo de reporte'
+            WHEN 93 THEN 'Sin información de estadificación en historia clínica'
+            WHEN 98 THEN 'No Aplica (Es cáncer de piel basocelular, es cáncer hematológico o es cáncer en SNC, excepto neuroblastoma)'
+            WHEN 99 THEN 'Desconocido, el dato de esta variable no se encuentra descrito en los soportes clínicos'
+            ELSE ''
+        END AS ESTADIO,
+        MEZ.ADMMEZLIQ AS [INDICACIONES DE ADMINISTRACION],
+        NULL AS [MOTIVO DE SUSPENCION],
+        'INTRAHOSPITALARIO' AS [TIPO SOLICITUD],
+        ISNULL(MED.CANPROCAL, LIQ.CANPROCAL) AS [CANTIDAD MEDICAMENTO],
+        NULL AS [ESQUEMA],
+        'NO' AS [CUSTODIA],
+        CASE
+            WHEN ATC.POSProduct = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'INCLUIDO EN PBS',
+        CASE
+            WHEN ATC.Conditioned = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'MEDICAMENTO CONDICIONADO',
+        CASE
+            WHEN ATC.UNIRS = '0' THEN 'NO'
+            ELSE 'SI'
+        END AS 'MEDICAMENTO UNIRS',
+        CASE
+            MEZ.PREESTADO
+            WHEN 1 THEN 'Iniciado: Cuando el Medicamento se Solicita por Primera Vez'
+            WHEN 2 THEN 'Ciclo Completado'
+            WHEN 3 THEN 'Tratamiento Modificado: Cuando existe una modificacion en la Dosificacion, Duracion o Frecuencia'
+            WHEN 4 THEN 'Tratamiento Suspendido: Cuando el Medicamento es Suspendido'
+            WHEN 5 THEN 'Alguno de los Medicamentos de la mezcla estan sin Existencia en el Kardex'
+        END AS 'ESTADO MEDICAMENTO',
+        CAST(ING.IFECHAING AS DATE) AS 'Fecha Ingreso'
+    FROM
+        INDIGO036.dbo.HCINFLIQA MEZ
+        INNER JOIN INDIGO036.dbo.INPACIENT AS PAC ON PAC.IPCODPACI = MEZ.IPCODPACI
+        INNER JOIN INDIGO036.dbo.ADINGRESO AS ING ON MEZ.NUMINGRES = ING.NUMINGRES
+        INNER JOIN INDIGO036.dbo.INUNIFUNC AS UFU ON MEZ.UFUCODIGO = UFU.UFUCODIGO
+        INNER JOIN INDIGO036.dbo.INPROFSAL AS SAL ON MEZ.CODPROSAL = SAL.CODPROSAL
+        INNER JOIN INDIGO036.Contract.HealthAdministrator HEA ON ING.GENCONENTITY = HEA.Id
+        INNER JOIN INDIGO036.Contract.CareGroup AS CGR ON ING.GENCAREGROUP = CGR.Id
+        INNER JOIN INDIGO036.dbo.INDIAGNOS AS DIA ON MEZ.CODDIAGNO = DIA.CODDIAGNO
+        INNER JOIN INDIGO036.dbo.INDIAGNOP AS EST ON MEZ.IPCODPACI = EST.IPCODPACI
+            AND MEZ.NUMINGRES = EST.NUMINGRES
+        LEFT JOIN INDIGO036.dbo.HCINFCONC AS MED ON MED.CODCONCEC = MEZ.CODCONCEC
+        LEFT JOIN INDIGO036.dbo.HCINFLIQD AS LIQ ON LIQ.CODCONCEC = MEZ.CODCONCEC
+            AND LIQ.NUMINGRES = MEZ.NUMINGRES
+        LEFT JOIN INDIGO036.dbo.IHLISTPRO AS PRO ON PRO.CODPRODUC = ISNULL(MED.CODPRODUC, LIQ.CODPRODUC)
+        LEFT JOIN INDIGO036.Inventory.ATC AS ATC ON PRO.CODPRODUC = ATC.Code
+        LEFT JOIN INDIGO036.dbo.HCVIAADMI AS VIA ON PRO.CODVIAADM = VIA.CODVIAADM
+        LEFT JOIN INDIGO036.dbo.IHFORMEDI AS FME ON PRO.CODFORMED = FME.CODFORMED
+        LEFT JOIN INDIGO036.dbo.INUNIMEDI AS UNI ON ISNULL(MED.UNIMEDMED, LIQ.UNIMEDBOL) = UNI.CODUNIMED
+)
+SELECT
+    CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,
+    *,
+    CAST([Fecha Ingreso] AS date) AS 'FECHA BUSQUEDA',
+    CONVERT(
+        DATETIME,
+        GETDATE() AT TIME ZONE 'Pakistan Standard Time',
+        1
+    ) AS ULT_ACTUAL
+FROM
+    CTE_MEDICAMENTOS
+UNION
+SELECT
+    CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,
+    *,
+    CAST([Fecha Ingreso] AS date) AS 'FECHA BUSQUEDA',
+    CONVERT(
+        DATETIME,
+        GETDATE() AT TIME ZONE 'Pakistan Standard Time',
+        1
+    ) AS ULT_ACTUAL
+FROM
+    CTE_MEZCLAS

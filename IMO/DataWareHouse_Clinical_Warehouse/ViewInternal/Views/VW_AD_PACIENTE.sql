@@ -1,0 +1,123 @@
+-- Workspace: IMO
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 45d58e75-d0a4-4f2b-bd10-65e2dfeda219
+-- Schema: ViewInternal
+-- Object: VW_AD_PACIENTE
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW ViewInternal.AD_Paciente
+AS 
+
+SELECT  
+    CASE
+        WHEN ig1.CODCENATE = '001' THEN 'Neiva'
+        WHEN ig1.CODCENATE = '002' THEN 'Pitalito'
+    END AS Sucursal,
+    A.IPCODPACI AS Documento,
+    CASE A.IPTIPODOC 
+        WHEN 1 THEN 'CC' WHEN 2 THEN 'CE' WHEN 3 THEN 'TI' WHEN 4 THEN 'RC' 
+        WHEN 5 THEN 'PA' WHEN 6 THEN 'AS' WHEN 7 THEN 'MS' WHEN 8 THEN 'NU' 
+        WHEN 9 THEN 'CN' WHEN 10 THEN 'CD' WHEN 11 THEN 'SC' WHEN 12 THEN 'PE'  
+        WHEN 13 THEN 'PT' WHEN 14 THEN 'DE' WHEN 15 THEN 'SI' 
+    END AS TipoDocumento, 
+    A.CODIGONIT AS Tercero, 
+    city.Name AS CiudadExpedición,
+    A.IPNOMCOMP AS NombrePaciente, 
+    DATEDIFF(year, A.IPFECNACI, ig1.IFECHAING) AS Edad, 
+    'NO APLICA' AS Empresa, 
+    CASE A.IPTIPOPAC 
+        WHEN 1 THEN 'CONTRIBUTIVO' WHEN 2 THEN 'SUBSIDIADO' WHEN 3 THEN 'VINCULADO' 
+        WHEN 4 THEN 'PARTICULAR' WHEN 5 THEN 'OTRO' WHEN 6 THEN 'DESPLAZADO REG. CONTRIBUTIVO' 
+        WHEN 7 THEN 'DESPLAZADO REG. SUBSIDIADO' WHEN 8 THEN 'DESPLAZADO NO ASEGURADO' 
+        WHEN 9 THEN 'Especial o excepción' WHEN 10 THEN 'Personas privadas de la libertad a cargo del Fondo Nacional de Salud' 
+        WHEN 11 THEN 'Tomador / amparado ARL' WHEN 12 THEN 'Tomador / amparado SOAT'  
+        WHEN 13 THEN 'Tomador / amparado planes voluntarios de salud' 
+    END AS TipoPaciente,
+    CASE A.IPTIPOAFI 
+        WHEN 0 THEN 'NO APLICA' WHEN 1 THEN 'COTIZANTE' WHEN 2 THEN 'BENEFICIARIO' 
+        WHEN 3 THEN 'ADICIONAL' WHEN 4 THEN 'JUB/RETIRADO' WHEN 5 THEN 'PENSIONADO' 
+    END AS TipoAfiliación, 
+    CASE A.CAPACIPAG 
+        WHEN 0 THEN ' ' WHEN 1 THEN 'Total Paciente' WHEN 2 THEN 'Cuota Recuperación' 
+        WHEN 3 THEN 'Total Entidad' 
+    END AS CapacidadPago, 
+    cg.Name AS GrupoAtencion, 
+    D.UBINOMBRE AS Ubicación, 
+    mu.MUNNOMBRE AS Municipio, 
+    DEP.nomdepart AS Departamento, 
+    E.NIVDESCRI AS Nivel, 
+    A.IPDIRECCI AS Direccion, 
+    A.IPTELEFON AS Telefono, 
+    A.IPTELMOVI AS Celular, 
+    A.IPFECNACI as FechaNacimiento, 
+    F.desactivi as Actividad, 
+    CASE A.IPSEXOPAC 
+        WHEN 1 THEN 'MASCULINO' WHEN 2 THEN 'FEMENINO' 
+    END AS Genero, 
+    CASE A.IPESTADOC 
+        WHEN 1 THEN 'SOLTERO' WHEN 2 THEN 'CASADO' WHEN 3 THEN 'VIUDO' 
+        WHEN 4 THEN 'UNION LIBRE' WHEN 5 THEN 'SEPARADO/DIV' 
+    END AS EstadoCivil, 
+    I.NIVEDESCRI AS NivelEducativo, 
+    J.CREDDESCRI AS Creencia, 
+    CASE A.TIPCOBSAL 
+        WHEN 1 THEN 'CONTRIBUTIVO' WHEN 2 THEN 'SUBTOTAL' WHEN 3 THEN 'SUBPARCIAL' 
+        WHEN 4 THEN 'CON SISBEN' WHEN 5 THEN 'SIN SISBEN' WHEN 6 THEN 'DESPLAZADOS' 
+        WHEN 7 THEN 'PLAN DE SALUD ADICIONAL' WHEN 8 THEN 'OTROS' 
+    END AS Cobertura, 
+    CASE A.DISCCODIGO 
+        WHEN 2 THEN 'NO' WHEN 1 THEN 'SI' 
+    END AS Discapacidad, 
+    A.CORELEPAC AS Correo, 
+    G.DESGRUPET AS GrupoEtnico, 
+    A.IPESTRATO AS Estrato, 
+    CASE A.ESTADOPAC 
+        WHEN 1 THEN 'ACTIVO' WHEN 2 THEN 'INACTIVO' 
+    END AS EstadoPaciente, 
+    A.OBSERVACI AS Observación, 
+    H1.NOMUSUARI AS UsuCrea, 
+    H1.DESCARUSU as CargoCrea,
+    A.FECREGCRE AS FechaCreacion, 
+    H2.NOMUSUARI AS UsuModifica, 
+    H2.DESCARUSU as CargoModifica,
+    A.FECREGMOD AS Fecha_Modificacion, 
+    CASE WHEN pais.Name IS NULL THEN 'Colombia' ELSE pais.Name END AS Pais, 
+    ISNULL(ingresos.CantidadIngresos, 0) AS CantidadIngresos
+
+FROM [INDIGO035].[dbo].INPACIENT AS A
+
+LEFT JOIN (
+    SELECT IPCODPACI, COUNT(*) AS CantidadIngresos
+    FROM [INDIGO035].[dbo].[ADINGRESO]
+    GROUP BY IPCODPACI
+) AS ingresos ON ingresos.IPCODPACI = A.IPCODPACI
+
+LEFT JOIN (
+    SELECT MAX(IFECHAING) AS fecha, IPCODPACI
+    FROM [INDIGO035].[dbo].[ADINGRESO] 
+    GROUP BY IPCODPACI
+) AS ig ON ig.IPCODPACI = A.IPCODPACI
+
+LEFT JOIN [INDIGO035].[dbo].[ADINGRESO] AS ig1 ON ig1.IPCODPACI = ig.IPCODPACI AND ig1.IFECHAING = ig.fecha
+
+LEFT OUTER JOIN [INDIGO035].[dbo].[INENTIDAD] AS B ON B.CODENTIDA = A.CODENTIDA 
+LEFT OUTER JOIN [INDIGO035].[dbo].[COCONTRAT] AS C ON C.CODCONTRA = A.CCCONTRAT
+LEFT OUTER JOIN [INDIGO035].[dbo].[INUBICACI] AS D ON D.AUUBICACI = A.AUUBICACI 
+LEFT OUTER JOIN [INDIGO035].[dbo].[INMUNICIP] AS mu ON mu.DEPMUNCOD = D.DEPMUNCOD 
+LEFT OUTER JOIN [INDIGO035].[dbo].[INDEPARTA] AS DEP ON DEP.depcodigo = mu.DEPCODIGO 
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADNIVELES] AS E ON E.NIVCODIGO = A.NIVCODIGO 
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADACTIVID] AS F ON F.codactivi = A.CODACTIVI  
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADGRUETNI] AS G ON G.CODGRUPOE = A.CODGRUPOE 
+LEFT OUTER JOIN [INDIGO035].[dbo].[SEGusuaru] AS H1 ON H1.CODUSUARI = A.CODUSUCRE 
+LEFT OUTER JOIN [INDIGO035].[dbo].[SEGusuaru] AS H2 ON H2.CODUSUARI = A.CODUSUMOD
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADNIVELED] AS I ON I.NIVECODIGO = A.NIVECODIGO 
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADCREDO] AS J ON J.CREDCODIGO = A.CREDCODIGO
+LEFT OUTER JOIN [INDIGO035].[Common].[Person] AS pp ON pp.IdentificationNumber = A.IPCODPACI 
+LEFT OUTER JOIN [INDIGO035].[Common].[City] AS city ON city.Id = A.GENEXPEDITIONCITY
+LEFT OUTER JOIN [INDIGO035].[Contract].[CareGroup] AS cg ON cg.Id = A.GENCAREGROUP 
+LEFT OUTER JOIN [INDIGO035].[Contract].[HealthAdministrator] AS ha ON ha.Id = A.GENCONENTITY 
+LEFT OUTER JOIN [INDIGO035].[Common].[Country] AS pais ON pais.Id = A.IDPAIS 
+
+WHERE A.ESTADOPAC = '1'  
+  AND ig1.CODCENATE IN ('001', '002')
+  AND ig.fecha >= '2025/01/01'

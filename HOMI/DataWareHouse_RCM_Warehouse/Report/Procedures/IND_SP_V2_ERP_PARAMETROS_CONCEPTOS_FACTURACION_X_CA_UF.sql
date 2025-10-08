@@ -1,0 +1,27 @@
+-- Workspace: HOMI
+-- Item: DataWareHouse_RCM [Warehouse]
+-- ItemId: 834d5676-5644-4a78-a5e2-f198281d02d0
+-- Schema: Report
+-- Object: IND_SP_V2_ERP_PARAMETROS_CONCEPTOS_FACTURACION_X_CA_UF
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE PROCEDURE Report.IND_SP_V2_ERP_PARAMETROS_CONCEPTOS_FACTURACION_X_CA_UF
+AS
+BEGIN
+SELECT
+    BO.Name AS 'CENTRO ATENCION',
+    BC.Code AS 'CODIGO CONCEPTO FACTURACION',
+    RTRIM(BC.Name) AS 'CONCEPTO FACTURACION',
+    FU.Code AS 'CODIGO UNIDAD FUNCIONAL',
+    RTRIM(FU.Name) AS 'UNIDAD FUNCIONAL',
+    CC.Code AS 'CODIGO CENTRO COSTO',
+    CC.Name AS 'CENTRO DE COSTO'
+FROM
+    INDIGO036.Billing.BillingConceptCostCenter BCC
+    INNER JOIN INDIGO036.Payroll.BranchOffice BO ON BO.Id = BCC.BranchOfficeId
+    INNER JOIN INDIGO036.Billing.BillingConcept BC ON BC.Id = BCC.BillingConceptId
+    INNER JOIN INDIGO036.Payroll.FunctionalUnit FU ON FU.Id = BCC.FunctionalUnitId
+    INNER JOIN INDIGO036.Payroll.CostCenter AS CC ON CC.Id = BCC.CostCenterId
+    
+
+END

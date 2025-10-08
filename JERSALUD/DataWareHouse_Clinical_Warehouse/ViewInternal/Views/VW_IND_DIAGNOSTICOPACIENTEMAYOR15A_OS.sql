@@ -1,0 +1,63 @@
+-- Workspace: JERSALUD
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9c6eaf45-9b46-445f-bd43-868d6c10c562
+-- Schema: ViewInternal
+-- Object: VW_IND_DIAGNOSTICOPACIENTEMAYOR15AÑOS
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW ViewInternal.VW_IND_DIAGNOSTICOPACIENTEMAYOR15AÑOS
+AS
+SELECT 
+
+I.NUMINGRES AS Ingreso, 
+    P.IPCODPACI AS Documento, 
+    DP.FECDIAGNO AS FechaDX, 
+    P.IPNOMCOMP AS Paciente, 
+    CONVERT(VARCHAR(10), P.IPFECNACI, 103) AS FechaNacimiento, 
+    CAST(DATEDIFF(dd, P.IPFECNACI, DP.FECDIAGNO) / 365.25 AS INT) AS EdadAtencion,
+    CASE P.IPSEXOPAC
+        WHEN 1
+        THEN 'Masculino'
+        WHEN 2
+        THEN 'Femenino'
+    END AS Sexo, 
+    ES.DESESPECI AS Especialidad,
+    D.CODDIAGNO AS DX, 
+    D.NOMDIAGNO AS NombreDX,
+    CASE DP.DIAINGEGR
+        WHEN 'I'
+        THEN 'INGRESO'
+        WHEN 'E'
+        THEN 'EGRESO'
+        WHEN 'A'
+        THEN 'AMBOS'
+    END AS TipoDX,
+    CASE
+        WHEN DP.CODDIAPRI = 1
+        THEN 'Principal'
+        ELSE 'Asociado'
+    END AS [Tipo Diagnostico], 
+    U.UFUDESCRI AS Unidad,
+    CASE I.TIPOINGRE
+        WHEN 1
+        THEN 'Ambulatorio'
+        WHEN 2
+        THEN 'Hospitalario'
+    END AS TipoIngreso, 
+    E.NOMENTIDA AS Entidad, 
+    E.CODADMPAG AS Cod_EPS, 
+    L.DEPMUNCOD AS UbicacionPaciente, 
+    P.IPDIRECCI AS Direccion, 
+    CA.NOMCENATE AS CentroAtencion
+FROM [INDIGO031].[dbo].[INDIAGNOP] AS DP
+INNER JOIN [INDIGO031].[dbo].[INDIAGNOS] AS D ON DP.CODDIAGNO = D.CODDIAGNO                                                            
+INNER JOIN [INDIGO031].[dbo].[INPACIENT] AS P ON DP.IPCODPACI = P.IPCODPACI
+INNER JOIN [INDIGO031].[dbo].[INUNIFUNC] AS U ON DP.UFUCODIGO = U.UFUCODIGO
+INNER JOIN [INDIGO031].[dbo].[ADINGRESO] AS I ON DP.NUMINGRES = I.NUMINGRES
+INNER JOIN [INDIGO031].[dbo].[INENTIDAD] AS E ON I.CODENTIDA = E.CODENTIDA
+INNER JOIN [INDIGO031].[dbo].[INUBICACI] AS L ON P.AUUBICACI = L.AUUBICACI
+INNER JOIN [INDIGO031].[dbo].[ADCENATEN] AS CA ON DP.CODCENATE = CA.CODCENATE
+INNER JOIN [INDIGO031].[dbo].[HCHISPACA] AS HC ON DP.NUMINGRES = HC.NUMINGRES 
+INNER JOIN [INDIGO031].[dbo].[INESPECIA] AS ES ON ES.CODESPECI = HC.CODESPTRA
+
+WHERE year (I.IFECHAING)=2021  and CA.NOMCENATE='JERSALUD GRANADA' 

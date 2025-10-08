@@ -1,0 +1,163 @@
+-- Workspace: IMO
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 45d58e75-d0a4-4f2b-bd10-65e2dfeda219
+-- Schema: ViewInternal
+-- Object: VW_IMO_AD_HC_PERFILEPIDEMIOLOGICO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW [ViewInternal].[IMO_AD_HC_PerfilEpidemiologico]
+AS
+
+SELECT
+    YEAR(ing.IFECHAING) AS Año,
+    ing.NUMINGRES AS Ingreso,
+    A.IPNOMCOMP AS Paciente,
+    A.IPCODPACI AS Identificacion,
+    CASE IPTIPODOC
+        WHEN 1 THEN 'CC' WHEN 2 THEN 'CE' WHEN 3 THEN 'TI' WHEN 4 THEN 'RC'
+        WHEN 5 THEN 'PA' WHEN 6 THEN 'AS' WHEN 7 THEN 'MS' WHEN 8 THEN 'NU'
+    END AS TipoIdentificacion,
+    CASE IPSEXOPAC WHEN 1 THEN 'Masculino' WHEN 2 THEN 'Femenino' END AS Genero,
+    DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) AS Edad_Años,
+    CASE IPESTADOC
+        WHEN 1 THEN 'Soltero' WHEN 2 THEN 'Casado' WHEN 3 THEN 'Viudo'
+        WHEN 4 THEN 'Union Libre' WHEN 5 THEN 'Separado/Div'
+    END AS [Estado Civil],
+    I.NIVEDESCRI AS [Nivel Educativo],
+    F.desactivi AS Ocupación,
+    B.Name AS Entidad,
+    CASE IPTIPOPAC
+        WHEN 1 THEN 'Contributivo' WHEN 2 THEN 'Subsidiado' WHEN 3 THEN 'Vinculado'
+        WHEN 4 THEN 'Particular' WHEN 5 THEN 'Otro'
+        WHEN 6 THEN 'Desplazado Reg. Contributivo'
+        WHEN 7 THEN 'Desplazado Reg. Subsidiado'
+        WHEN 8 THEN 'Desplazado No Asegurado'
+    END AS TipoAfiliacion,
+    A.IPESTRATO AS ESTRATO,
+    CASE ing.IINGREPOR
+        WHEN 1 THEN 'Urgencias' WHEN 2 THEN 'Consulta Externa' WHEN 3 THEN 'Nacido Hospital'
+        WHEN 4 THEN 'Remitido' WHEN 5 THEN 'Hospitalización de Urgencias'
+    END AS IngresoPor,
+    CASE ing.TIPOINGRE WHEN 1 THEN 'Ambulatorio' WHEN 2 THEN 'Hospitalario' END AS TipoIngreso,
+    ing.IFECHAING AS [Fecha atencion],
+    uf.UFUDESCRI AS Servicio,
+    ES1.DESESPECI AS [Especialidad Tratante],
+    ing.CODDIAING AS CIE10,
+    dx.NOMDIAGNO AS [Dx Ingreso],
+    Dx1.DIAGNOSTICO AS CodOtrDx,
+    Dx1.NOMBRE AS OtrosDx,
+    ing.CODDIAEGR AS CodEgreso,
+    dxe.NOMDIAGNO AS [Dx Egreso],
+    ca.NOMCENATE AS Sucursal,
+    CASE A.ZONAPARTADA WHEN 'False' THEN 'Urbana' WHEN 'True' THEN 'Rural' END AS Area,
+    D.UBINOMBRE AS Ubicacion,
+    m.MUNNOMBRE AS MunicipioProcedencia,
+    DEP.nomdepart AS Departamento,
+    G.DESGRUPET AS GRUPOETNICO,
+    J.CREDDESCRI AS Religion,
+    PE1.DESCRIPCION AS [Población Vulnerable],
+    W.DISCDESCRI AS Discapacidad,
+    cm.DESCAUMUE AS [Causa Muerte],
+    CASE
+        WHEN CONVERT(char(10), eg.FECMUEPAC, 103) = '01/01/1900' THEN ing.FECHEGRESO
+        WHEN CONVERT(char(10), eg.FECMUEPAC, 103) <> '01/01/1900' THEN eg.FECMUEPAC
+    END AS [Fecha de Defunción],
+    A.IPFECNACI AS FechaNacimiento,
+    A.IPDIRECCI AS Direccion,
+    A.IPTELEFON AS Telefono,
+    A.IPTELMOVI AS Celular,
+    CASE GRUPCODIGO
+        WHEN 1 THEN 'CARCELARIOS' WHEN 2 THEN 'DESPLAZADOS' WHEN 3 THEN 'MIGRANTES'
+        WHEN 4 THEN 'GESTANTES' WHEN 5 THEN 'HABITANTES DE LA CALLE' WHEN 4 THEN 'OTRO'
+    END AS GrupoEspecial,
+    ing.FECHEGRESO AS FechaEgreso,
+    CASE ESTPACEGR
+        WHEN 1 THEN 'Mejor' WHEN 2 THEN 'Igual o Peor' WHEN 3 THEN 'Fallecido'
+        WHEN 4 THEN 'Remitido' WHEN 5 THEN 'Hospitalizacion en Casa'
+    END AS [Condicion de Egreso],
+    uf.UFUCODIGO,
+    --AND uf.UFUCODIGO LIKE 'N%'
+    CASE
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) <= '5' THEN '1 a 5 años'
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) BETWEEN '6' AND '11' THEN '6 a 11 años'
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) BETWEEN '12' AND '17' THEN '12 a 17 años'
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) BETWEEN '18' AND '28' THEN '18 a 28 años'
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) BETWEEN '29' AND '59' THEN '29 a 59 años'
+        WHEN DATEDIFF(YEAR, A.IPFECNACI, ing.IFECHAING) >= '60' THEN 'Mayor a 60 años'
+    END AS RangoEdad,
+    tt.Nit,
+    ga.Name AS GrupoAtencion
+FROM [INDIGO035].[dbo].[ADINGRESO] AS ing
+INNER JOIN [INDIGO035].[dbo].[INUNIFUNC] AS uf
+    ON uf.UFUCODIGO = ing.UFUCODIGO
+    --AND uf.UFUCODIGO LIKE 'N%'
+INNER JOIN [INDIGO035].[dbo].[INPACIENT] AS A
+    ON ing.IPCODPACI = A.IPCODPACI
+    AND YEAR(ing.IFECHAING) >= '2022'
+INNER JOIN [INDIGO035].[Contract].[HealthAdministrator] AS B
+    ON B.Id = ing.GENCONENTITY
+INNER JOIN [INDIGO035].[Common].[ThirdParty] AS tt
+    ON tt.Id = B.ThirdPartyId
+--INNER JOIN dbo.COCONTRAT AS C  ON C.CODCONTRA = A.CCCONTRAT
+INNER JOIN [INDIGO035].[dbo].[INUBICACI] AS D
+    ON D.AUUBICACI = A.AUUBICACI
+INNER JOIN [INDIGO035].[dbo].[ADNIVELES] AS E
+    ON E.NIVCODIGO = A.NIVCODIGO
+LEFT OUTER JOIN [INDIGO035].[dbo].[INUNIFUNC] AS ufh
+    ON ufh.UFUCODIGO = ing.UFUINGMED
+    --AND uf.UFUCODIGO LIKE 'N%'
+INNER JOIN [INDIGO035].[dbo].[ADACTIVID] AS F
+    ON F.codactivi = A.CODACTIVI
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADGRUETNI] AS G
+    ON G.CODGRUPOE = A.CODGRUPOE
+LEFT OUTER JOIN [INDIGO035].[dbo].[SEGusuaru] AS H1
+    ON H1.CODUSUARI = A.CODUSUCRE
+LEFT OUTER JOIN [INDIGO035].[dbo].[SEGusuaru] AS H2
+    ON H2.CODUSUARI = A.CODUSUMOD
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADNIVELED] AS I
+    ON I.NIVECODIGO = A.NIVECODIGO
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADDISCAPACI] AS W
+    ON W.DISCCODIGO = A.DISCCODIGO
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADCREDO] AS J
+    ON J.CREDCODIGO = A.CREDCODIGO
+INNER JOIN [INDIGO035].[dbo].[INUBICACI] AS u
+    ON u.AUUBICACI = A.AUUBICACI
+LEFT OUTER JOIN [INDIGO035].[dbo].[INMUNICIP] AS m
+    ON m.DEPMUNCOD = u.DEPMUNCOD
+LEFT OUTER JOIN [INDIGO035].[dbo].[INDEPARTA] AS DEP
+    ON m.DEPCODIGO = DEP.depcodigo
+LEFT OUTER JOIN [INDIGO035].[Contract].[CareGroup] AS ga
+    ON ga.Id = ing.GENCAREGROUP
+LEFT OUTER JOIN [INDIGO035].[dbo].[HCHISPACA] AS HC
+    ON HC.NUMINGRES = ing.NUMINGRES
+    AND HC.TIPHISPAC = 'I'
+LEFT OUTER JOIN [INDIGO035].[dbo].[INESPECIA] AS ES1
+    ON ES1.CODESPECI = HC.CODESPTRA
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADPOBESPEPAC] AS pe
+    ON pe.IPCODPACI = A.IPCODPACI
+LEFT OUTER JOIN [INDIGO035].[dbo].[ADPOBESPE] AS PE1
+    ON PE1.ID = pe.IDADPOBESPE
+LEFT OUTER JOIN [INDIGO035].[dbo].[INDIAGNOS] AS dx
+    ON dx.CODDIAGNO = ing.CODDIAING
+LEFT OUTER JOIN [INDIGO035].[dbo].[INDIAGNOS] AS dxe
+    ON dxe.CODDIAGNO = ing.CODDIAEGR
+INNER JOIN [INDIGO035].[dbo].[ADCENATEN] AS ca
+    ON ca.CODCENATE = ing.CODCENATE
+LEFT OUTER JOIN [INDIGO035].[dbo].[HCREGEGRE] AS eg
+    ON eg.NUMINGRES = ing.NUMINGRES
+LEFT OUTER JOIN [INDIGO035].[dbo].[INCAUMUER] AS cm
+    ON cm.CODCAUMUE = eg.CODCAUMUE
+LEFT OUTER JOIN (
+    SELECT DISTINCT A.CODDIAGNO AS DIAGNOSTICO, B.NOMDIAGNO AS NOMBRE, A.NUMINGRES
+    FROM [INDIGO035].[dbo].[INDIAGNOH] AS A
+    INNER JOIN [INDIGO035].[dbo].[INDIAGNOS] AS B
+        ON A.CODDIAGNO = B.CODDIAGNO
+) AS Dx1
+    ON Dx1.NUMINGRES = ing.NUMINGRES
+    AND Dx1.DIAGNOSTICO <> HC.CODDIAGNO
+WHERE
+    (A.CORELEPAC IS NOT NULL)
+    AND (ing.CODCENATE IN ('001'))
+    AND YEAR(ing.IFECHAING) >= '2022'
+    AND ing.IESTADOIN <> 'A'
+    AND A.IPCODPACI <> '0123456789';

@@ -1,0 +1,33 @@
+-- Workspace: HOMI
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9e4ad354-8031-4a13-8643-33b3234761ff
+-- Schema: Report
+-- Object: VW_VIEWFACTORESRIESGO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW [Report].[VW_VIEWFACTORESRIESGO]
+AS
+
+SELECT
+    TOP 100 PERCENT FAC.IPCODPACI AS 'ID PACIENTE',
+    PAC.IPNOMCOMP AS 'NOMBRE PACIENTE',
+    RIS.Description AS 'RIESGO',
+    FAC.Intervention AS 'INTERVENCION',
+    FAC.Observation AS 'OBSERVACION',
+    FAC.UserCreation AS 'COD. USUARIO CREA',
+    US.NOMUSUARI AS 'USUARIO CREA',
+    CASE
+        WHEN FAC.Status = 0 THEN 'Inactivo'
+        ELSE 'Activo'
+    END AS 'ESTADO',
+    FAC.UserDelete AS 'COD. USUARIO ELIMINA',
+    USD.NOMUSUARI AS 'USUARIO ELIMINA',
+    FAC.DateDelete AS 'FECHA ELIMINACION'
+FROM
+    INDIGO036.dbo.ReportRiskFactors FAC
+    INNER JOIN INDIGO036.dbo.RiskFactor RIS ON RIS.Id = FAC.IdRiskFactor
+    INNER JOIN INDIGO036.dbo.INPACIENT PAC ON PAC.IPCODPACI = FAC.IPCODPACI
+    INNER JOIN INDIGO036.dbo.SEGusuaru US ON US.CODUSUARI = FAC.UserCreation
+    LEFT JOIN INDIGO036.dbo.SEGusuaru USD ON USD.CODUSUARI = FAC.UserDelete
+ORDER BY
+    FAC.IPCODPACI

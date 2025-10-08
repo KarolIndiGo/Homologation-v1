@@ -1,0 +1,82 @@
+-- Workspace: JERSALUD
+-- Item: DataWareHouse_Clinical [Warehouse]
+-- ItemId: 9c6eaf45-9b46-445f-bd43-868d6c10c562
+-- Schema: ViewInternal
+-- Object: VW_IND_AD_HC_FORMATOHISTORIAS_JERSALUD
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW ViewInternal.VW_IND_AD_HC_FORMATOHISTORIAS_JERSALUD 
+AS
+
+SELECT 
+    CASE P.IPTIPODOC 
+        WHEN 1 THEN 'CC' 
+        WHEN 2 THEN 'CE' 
+        WHEN 3 THEN 'TI' 
+        WHEN 4 THEN 'RC' 
+        WHEN 5 THEN 'PA'  
+        WHEN 6 THEN 'AS' 
+        WHEN 7 THEN 'MS'
+        WHEN 8 THEN 'NU' 
+        WHEN 9 THEN 'CN' 
+        WHEN 10 THEN 'CD' 
+        WHEN 11 THEN 'SC' 
+        WHEN 12 THEN 'PE'  
+        WHEN 13 THEN 'PT' 
+        WHEN 14 THEN 'DE' END AS [TIPO DE IDENTIFICACIÓN]
+    , H1.Documento AS [DOCUMENTO DE IDENTIFICACIÓN]
+    , UPPER(P.IPPRINOMB) AS [PRIMER NOMBRE]
+    , UPPER(P.IPSEGNOMB) AS [SEGUNDO NOMBRE]
+    , UPPER(P.IPPRIAPEL) AS [PRIMER APELLIDO]
+    , UPPER(P.IPSEGAPEL) AS [SEGUNDO APELLIDO]
+    , CASE 
+        WHEN P.IPSEXOPAC = '1' THEN 'M' 
+        WHEN P.IPSEXOPAC = '2' THEN 'F' 
+        END AS GÉNERO
+    , P.IPFECNACI as [FECHA DE NACIMIENTO]
+    , YEAR([Fecha Ultima Atención])- YEAR(P.IPFECNACI) AS EDAD
+    , 'AÑOS' AS [UNIDAD DE MEDIDA EDAD]
+    , DEP.nomdepart AS [DEPARTAMENTO] 
+    , mu.MUNNOMBRE AS [MUNICIPIO]
+    , P.IPDIRECCI AS [DIRECCIÓN] 
+    , P.IPTELEFON +' - '+ P.IPTELMOVI AS [TELÉFONO]
+    , '' AS PROGRAMA, H.CODDIAGNO AS [CIE 10 / CIE 11 DX PPAL] 
+    , DX.NOMDIAGNO AS [DIAGNOSTICO PRINCIPAL]
+    , H1.[Fecha Ultima Atención] AS [FECHA DE LA ÚLTIMA ATENCIÓN]
+    , SUM(HC.TotalFolios) AS [NUMERO DE FOLIOS DIGITAL]
+    , substring(CE.NOMCENATE,9,30) AS [CENTRO ATENCION]
+    , CE.DIRCENATE as [DIRECCIÓN CENTRO]
+    , CE.CODIPSSEC AS [CODIGO HABILITACIÓN]
+
+FROM [DataWareHouse_Clinical].[ViewInternal].[VW_IND_AD_HC_TOTALHISTORIAS_JERSALUD] AS HC  
+INNER JOIN (select IPCODPACI as Documento, MAX(FECHISPAC) AS [Fecha Ultima Atención]
+            from [INDIGO031].[dbo].[HCHISPACA] 
+            where IPCODPACI not in ('1234567','9999999')
+            GROUP BY IPCODPACI) as H1 ON H1.Documento=HC.Documento
+JOIN [INDIGO031].[dbo].[HCHISPACA] AS H  ON H.IPCODPACI = H1.Documento AND H.FECHISPAC=H1.[Fecha Ultima Atención] 
+JOIN [INDIGO031].[dbo].[ADCENATEN] AS CE  ON CE.CODCENATE=H.CODCENATE
+JOIN [INDIGO031].[dbo].[INPACIENT] AS P  ON P.IPCODPACI=H.IPCODPACI
+LEFT JOIN [INDIGO031].[dbo].[INUBICACI] AS UB ON UB.AUUBICACI = P.AUUBICACI
+LEFT JOIN [INDIGO031].[dbo].[INMUNICIP] AS mu ON mu.DEPMUNCOD = UB.DEPMUNCOD
+LEFT JOIN [INDIGO031].[dbo].[INDEPARTA] AS DEP ON DEP.depcodigo = mu.DEPCODIGO      
+LEFT JOIN [INDIGO031].[dbo].[INDIAGNOS] AS DX  ON DX.CODDIAGNO=H.CODDIAGNO
+GROUP BY P.IPTIPODOC
+        , H1.Documento
+        , (P.IPPRINOMB) 
+        , (P.IPSEGNOMB) 
+        , (P.IPPRIAPEL) 
+        , (P.IPSEGAPEL) 
+        , P.IPSEXOPAC
+        , P.IPFECNACI
+        , DEP.nomdepart  
+        , mu.MUNNOMBRE 
+        , P.IPDIRECCI 
+        , P.IPTELEFON 
+        , P.IPTELMOVI 
+        , H.CODDIAGNO  
+        , DX.NOMDIAGNO 
+        , H1.[Fecha Ultima Atención] 
+        , CE.NOMCENATE
+        , CE.DIRCENATE
+        , CE.CODIPSSEC
+
