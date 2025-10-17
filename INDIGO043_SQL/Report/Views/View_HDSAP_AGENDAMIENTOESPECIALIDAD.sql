@@ -1,0 +1,49 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_AGENDAMIENTOESPECIALIDAD
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_AGENDAMIENTOESPECIALIDAD]
+AS
+
+SELECT      YEAR(aga.FECHORAIN) AS Año,
+			MONTH(CAST(aga.FECHORAIN AS DATE)) AS Mes,
+			pro.NOMMEDICO AS Especialista,
+			COUNT(CODAUTONU) AS Asignadas,
+    CASE 
+        WHEN ine.CODESPECI = '101' THEN 'MEDICINA INTERNA'
+        WHEN ine.CODESPECI = '085' THEN 'GINECOLOGIA Y OBSTETRICIA'
+        WHEN ine.CODESPECI = '142' THEN 'PEDIATRIA'
+        WHEN ine.CODESPECI = '131' THEN 'ORTOPEDIA Y TRAUMATOLOGIA'
+        WHEN ine.CODESPECI = '044' THEN 'CIRUGIA GENERAL'
+    END AS Especialidad,
+    CASE 
+        WHEN aga.CODESTCIT = 0 THEN 'Asignada'
+        WHEN aga.CODESTCIT = 1 THEN 'Cumplida'
+        WHEN aga.CODESTCIT = 2 THEN 'Incumplida'
+        WHEN aga.CODESTCIT = 3 THEN 'Preasignada'
+    END AS EstadoCita
+FROM 
+    AGASICITA aga
+JOIN 
+    INESPECIA ine ON ine.CODESPECI = aga.CODESPECI
+JOIN 
+    INPROFSAL pro ON pro.CODPROSAL = aga.CODPROSAL
+WHERE 
+    ine.CODESPECI IN ('044','131','085','101','142') 
+    AND NOT aga.CODESTCIT = 4 --and MONTH(CAST(aga.FECHORAIN AS DATE))= '01' and  YEAR(aga.FECHORAIN) = '2024'
+GROUP BY
+    MONTH(CAST(aga.FECHORAIN AS DATE)),
+	YEAR(aga.FECHORAIN),
+    pro.NOMMEDICO,
+    ine.DESESPECI,
+    ine.CODESPECI,
+    aga.CODESTCIT;
+  
+

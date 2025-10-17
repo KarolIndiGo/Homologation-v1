@@ -1,0 +1,49 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_TRAZABILIDAD_PROCEDIMIENTO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+-- =============================================
+-- Author:      Miguel Angle Ruiz Vega
+-- Create date: 2025-04-21 10:51:38
+-- Database:    INDIGO043
+-- Description: Reporte Trazabilidad Procedimiento QX
+-- =============================================
+
+
+
+CREATE VIEW [Report].[View_HDSAP_TRAZABILIDAD_PROCEDIMIENTO]
+AS
+SELECT 
+b.FECHORFIN 'FECHA INFORME QX',
+C.IPCODPACI 'DOCUMENTO', 
+C.IPNOMCOMP 'NOMBRE COMPLETO', 
+A.CODPROSAL 'PROFESIONAL SALUD', 
+D.NOMMEDICO 'NOMBRE MEDICO', 
+CASE D.MEDPERCIR
+		WHEN 0 THEN 'Ninguno'
+        WHEN 1 THEN 'Cirujano'
+        WHEN 2 THEN 'Anestesiologos'
+        WHEN 3 THEN 'Ayudantes'
+        WHEN 4 THEN 'Anestesiologos/ Cirujano'
+		WHEN 5 THEN 'Circulante'
+		WHEN 4 THEN 'Otro'
+		END AS PERFIL_CIRUGIA_DESCRIPCION,
+--E.CODUSUARI 'CODIGO JEFE DE ENFERMERIA',
+F.NOMUSUARI 'NOMBRE DE JEFE',
+E.FECVISREG 'FECHA DE REGISTRO VISADO'
+FROM		HCQXEQUIP A 
+INNER JOIN	HCQXINFOR B ON A.NUMINGRES = B.NUMINGRES
+INNER JOIN	INPACIENT C ON A.IPCODPACI = C.IPCODPACI
+INNER JOIN	INPROFSAL D ON A.CODPROSAL = D.CODPROSAL
+INNER JOIN	HCHISPACA E ON A.NUMINGRES = E.NUMINGRES
+INNER JOIN	SEGusuaru F ON E.CODUSUARI = F.CODUSUARI
+

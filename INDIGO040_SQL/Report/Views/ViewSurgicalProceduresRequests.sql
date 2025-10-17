@@ -1,0 +1,461 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: ViewSurgicalProceduresRequests
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+/*******************************************************************************************************************
+Nombre: Report.ViewSurgicalProceduresRequests
+Tipo: Vista
+Observacion:Ordenamiento de procedimientos QX
+Profesional:
+Fecha:
+---------------------------------------------------------------------------
+Modificaciones
+_____________________________________________________________________________
+Version 2
+Persona que modifico: Nilsson Miguel Galindo Lopez
+Fecha:09-08-2023
+Ovservaciones:Se cambia la logica del estado de la orden y se agrega la fecha de cancelación y el motivo no solo por agenda si 
+			  no por la orden del medico
+--------------------------------------
+Version 3
+Persona que modifico:
+Fecha:
+Ovservaciones:
+***********************************************************************************************************************************/
+
+
+CREATE VIEW [Report].[ViewSurgicalProceduresRequests] AS
+/*
+INDIGO001
+INDIGO006
+INDIGO007
+INDIGO008
+INDIGO009
+INDIGO010
+INDIGO012
+INDIGO013
+INDIGO014
+INDIGO015
+INDIGO030
+*/
+
+WITH CTE_ORDENAMIENTO_PROCEDIMIENTOS_QX AS 
+(
+SELECT RTRIM(E.NOMCENATE) [CENTRO ATENCION], 
+A.UFUCODIGO + ' - ' + RTRIM(D.UFUDESCRI) AS [UNIDAD FUNCIONAL], 
+CG.Code + '-' + CG.Name [GRUPO], 
+CSG.CODE + '-' + CSG.Name [SUBGRUPO], 
+A.CODSERIPS [CODIGO CUPS], 
+RTRIM(B.DESSERIPS) AS [DESCRIPCION SERVICIO], 
+ISNULL(cd.Code + ' - ' + cd.Name, '') [DESCRIPCION RELACIONADA], 
+A.FECORDMED AS [FECHA SOLICITUD],
+CASE I.IPTIPODOC WHEN '1'THEN 'CC'
+				 WHEN '2'THEN 'CE'
+				 WHEN '3'THEN 'TI'
+				 WHEN '4'THEN 'RC'
+				 WHEN '5'THEN 'PA'
+				 WHEN '6'THEN 'AS'
+				 WHEN '7'THEN 'MS'
+				 WHEN '8'THEN 'NU'
+				 WHEN '9'THEN 'NV'
+				 WHEN '10'THEN 'CD'
+				 WHEN '11'THEN 'SC'
+				 WHEN '12'THEN 'PE'END AS [TIPO IDENTIFICACION], 
+a.IPCODPACI AS [IDENTIFICACION], 
+I.IPTELEFON AS [TELEFONO FIJO], 
+I.IPTELMOVI AS [TELEFONO MOVIL], 
+i.IPNOMCOMP AS [PACIENTE], 
+CAST (i.IPFECNACI as date) AS [FECHA DE NACIMIENTO], 
+DATEDIFF(YEAR, I.IPFECNACI, GETDATE()) AS [EDAD],
+A.NUMINGRES AS [INGRESO],
+A.NUMEFOLIO AS FOLIO, 
+/*IN V2 CASE WHEN B..SERREASIT = '1'THEN 'Estudios Realizados en Sitio'
+     WHEN A.ESTSERIPS IN('2', '3', '4')THEN 'Estudios Realizados'
+     WHEN A.ESTSERIPS = '6'THEN 'Anulado'ELSE 'Estudios No Realizados'END AS ESTADO, */
+CASE WHEN B.SERREASIT = '1'THEN 'Estudios Realizados en Sitio'
+     WHEN A.ESTSERIPS='4'THEN 'Estudios Realizados'
+	 WHEN A.ESTSERIPS='2' THEN 'Sala Programada'
+	 WHEN A.ESTSERIPS='3' THEN 'Cancelado'
+     WHEN A.ESTSERIPS = '6'THEN 'Anulado'ELSE 'Estudios No Realizados'END AS ESTADO, --FN V2
+SUM(A.CANSERIPS) AS CANTIDAD, 
+PRO.CODPROSAL [ID PROFESIONAL], 
+PRO.NOMMEDICO AS PROFESIONAL, 
+ESPMED.DESESPECI ESPECIALIDAD, 
+DIAG.CODDIAGNO CIE10, 
+DIAG.NOMDIAGNO DIAGNOSTICO,
+CASE ESTA.ESTADIO WHEN 0 THEN 'ESTADIO CLÍNICO (EC) 0 (TUMOR IN SITU)'
+				  WHEN 1 THEN 'EC I O 1'
+				  WHEN 2 THEN 'EC IA O 1A'
+				  WHEN 3 THEN 'EC IA1'
+				  WHEN 4 THEN 'EC IA2'
+				  WHEN 5 THEN 'EC IB O 1B'
+				  WHEN 6 THEN 'EC IB1'
+				  WHEN 7 THEN 'EC IB2'
+				  WHEN 8 THEN 'EC IC O 1C'
+				  WHEN 9 THEN 'EC IS O 1S'
+				  WHEN 10 THEN 'EC II O 2'
+				  WHEN 11 THEN 'EC IIA O 2A'
+				  WHEN 12 THEN 'EC IIA1'
+				  WHEN 13 THEN 'EC IIA2'
+				  WHEN 14 THEN 'EC IIB O 2B'
+				  WHEN 15 THEN 'EC IIC O 2C'
+				  WHEN 16 THEN 'EC III O 3'
+				  WHEN 17 THEN 'EC IIIA O 3A'
+				  WHEN 18 THEN 'EC IIIB O 3B'
+				  WHEN 19 THEN 'EC IIIC O 3C'
+				  WHEN 20 THEN 'EC IV O 4'
+				  WHEN 21 THEN 'EC IVA O 4A'
+				  WHEN 22 THEN 'EC IVB O 4B'
+				  WHEN 23 THEN 'EC IVC O 4C'
+				  WHEN 24 THEN 'EC 4S (PARA NEUROBLASTOMA)'
+				  WHEN 25 THEN 'EC  V O 5'
+				  WHEN 26 THEN 'EC ESTADIO IAB'
+				  WHEN 55 THEN 'PERSONA CON ASEGURAMIENTO (RÉGIMEN SUBSIDIADO O CONTRIBUTIVO Y QUE NO SON PPNA) QUE RECIBIÓ SERVICIOS DE SALUD POR PARTE DEL ENTE TERRITORIALDURANTE EL PERIODO DE REPORTE'
+				  WHEN 93 THEN 'SIN INFORMACIÓN DE ESTADIFICACIÓN EN HISTORIA CLÍNICA'
+				  WHEN 98 THEN 'NO APLICA (ES CÁNCER DE PIEL BASOCELULAR, ES CÁNCER HEMATOLÓGICO O ES CÁNCER EN SNC, EXCEPTO NEUROBLASTOMA)'
+				  WHEN 99 THEN 'DESCONOCIDO, EL DATO DE ESTA VARIABLE NO SE ENCUENTRA DESCRITO EN LOS SOPORTES CLÍNICOS'
+				  ELSE ''END ESTADIO,
+CASE WHEN MANEXTPRO = 0 THEN 'HOSPITALARIO'
+     ELSE 'AMBULATORIO' END AS [TIPO SOLICITUD], 
+CASE PRISERIPS WHEN 1 THEN 'URGENTE' 
+			   WHEN 2 THEN 'RUTINARIO'
+			   WHEN 3 THEN 'NORMAL' 
+			   WHEN 4 THEN 'DEFINIR CONDUCTA'END AS [PRIORIDAD DEL SERVICIO],
+EA.Code + ' - ' + EA.Name AS [ENTIDAD ADMINISTRADORA], 
+GA.CODE + ' - ' + GA.NAME [GRUPO ATENCION],
+CASE GA.LiquidationType WHEN 1 THEN 'Pago por Servicios'
+						WHEN 2 THEN 'PGP'
+						WHEN 3 THEN 'Factura Global'
+						WHEN 4 THEN 'Capitacion Global'
+						WHEN 5 THEN 'CONTROL'END [TIPO CONTRATO], 
+'PROCEDIMIENTOS QX' [TIPO ORDEN], 
+IIF(G.CodGrupo IS NULL, 'No', 'Si') CUBIERTO, 
+ISNULL(G.Contratado, 'No') CONTRATADO, 
+ISNULL(G.Cotizado, 'No') COTIZADO, 
+GA.CODE [CODIGO GRUPO], 
+A.IDDESCRIPCIONRELACIONADA, 
+--in v1
+PQX.FECHORAIN [FECHA DE PROGRAMACION],
+ISNULL(A.FECHAANULA,PQX.FECHACAN) AS [FECHA CANCELACION PROG],
+ISNULL(A.MOTIVOANULA,CAN.DESCAUCAN) AS [MOTIVO DE CANCELACION],
+IQX.FECHORINI [FECHA DEL PROCEDEIMIENTO],
+--fn v1
+FAC.InvoiceNumber AS FACTURA,
+CAST(A.FECORDMED AS DATE) [FECHA BUSQUEDA]
+FROM dbo.ADINGRESO ing
+JOIN dbo.HCORDPROQ A ON ing.NUMINGRES = a.NUMINGRES
+--in v1
+LEFT join AGEPROGQX PQX on A.AUTO=PQX.AUTOHCORDPROQ 
+LEFT JOIN AGCACANQX CAN ON CAN.CODCACANQ=PQX.CODCAUCAN
+LEFT JOIN dbo.HCQXINFOR IQX ON A.NUMINGRES=IQX.NUMINGRES AND A.CODSERIPS=IQX.CODSERIPS
+--fn v1
+JOIN dbo.INCUPSIPS B ON A.CODSERIPS = B.CODSERIPS
+JOIN dbo.INPACIENT i ON a.IPCODPACI = i.IPCODPACI
+JOIN dbo.INUNIFUNC D ON A.UFUCODIGO = D.UFUCODIGO
+JOIN dbo.ADCENATEN E ON A.CODCENATE = E.CODCENATE
+JOIN dbo.INPROFSAL PRO ON A.CODPROSAL = PRO.CODPROSAL
+JOIN Contract.CUPSEntity AS CUPS WITH(NOLOCK) ON CUPS.Code = B.CODSERIPS
+JOIN Contract.CupsSubgroup AS CSG WITH(NOLOCK) ON CSG.Id = CUPS.CUPSSubGroupId
+JOIN Contract.CupsGroup AS CG WITH(NOLOCK) ON CG.Id = CSG.CupsGroupId
+JOIN dbo.HCHISPACA HIS WITH(NOLOCK) ON A.NUMINGRES = HIS.NUMINGRES
+                                    AND A.NUMEFOLIO = HIS.NUMEFOLIO
+JOIN dbo.INESPECIA AS ESPMED WITH(NOLOCK) ON ESPMED.CODESPECI = HIS.CODESPTRA
+JOIN dbo.INDIAGNOS AS DIAG WITH(NOLOCK) ON DIAG.CODDIAGNO = HIS.CODDIAGNO
+JOIN Contract.CareGroup AS GA WITH(NOLOCK) ON GA.Id = ING.GENCAREGROUP
+JOIN Contract.HealthAdministrator AS EA WITH(NOLOCK) ON EA.Id = ing.GENCONENTITY
+LEFT JOIN Contract.CUPSEntityContractDescriptions cecd ON cecd.Id = a.IDDESCRIPCIONRELACIONADA
+LEFT JOIN Contract.ContractDescriptions cd ON cd.Id = cecd.ContractDescriptionId LEFT JOIN
+Billing.ServiceOrder ORD ON ORD.Id=A.GENSERVICEORDER LEFT JOIN
+Billing.ServiceOrderDetail ORDD ON ORD.Id=ORDD.ServiceOrderId LEFT JOIN
+Billing.InvoiceDetail FACD ON ORDD.ID=FACD.ServiceOrderDetailId LEFT JOIN
+Billing.Invoice FAC ON FACD.InvoiceId=FAC.Id LEFT JOIN 
+dbo.INDIAGNOP AS EST WITH(NOLOCK) ON A.IPCODPACI = EST.IPCODPACI AND A.NUMINGRES = EST.NUMINGRES
+																 AND EST.NUMEFOLIO = A.NUMEFOLIO
+																 AND EST.ESTADIO IS NOT NULL
+LEFT JOIN(SELECT CG.Code AS CodGrupo, 
+		  CG.Name AS GrupoAtencion, 
+		  CON.Code AS CodContrato, 
+		  CON.ContractName AS NombreContrato, 
+		  PT.Code AS CodPlantiProce, 
+		  PT.Name AS PlantillaProcedimiento, 
+		  cgR.Code AS CodigoGrupo, 
+		  cgR.Name AS Grupo, 
+		  csg.Code AS CodSubGrupo, 
+		  csg.Name AS SubGrupo, 
+		  CE.Code AS Cups, 
+		  CE.Description AS DescripcionCups, 
+		  CD.Code AS CodRelacion, 
+		  CD.Name AS DescripcionRelacionada,
+		  CASE PC.Contracted WHEN 1 THEN 'Si' ELSE 'No' END AS Contratado,
+		  CASE PC.Quoted WHEN 1 THEN 'Si'ELSE 'No'END AS Cotizado, 
+		  CECD.Id AS IdRelacion
+		  FROM Contract.CareGroup AS CG
+		  INNER JOIN Contract.Contract AS CON ON CG.ContractId = CON.Id
+		  INNER JOIN Contract.ProcedureTemplate AS PT ON CG.ProcedureTemplateId = PT.Id
+		  INNER JOIN Contract.ProcedureCups AS PC ON PT.Id = PC.ProceduresTemplateId
+		  INNER JOIN Contract.CUPSEntity AS CE ON PC.CupsId = CE.Id
+		  LEFT OUTER JOIN Contract.CUPSEntityContractDescriptions AS CECD ON PC.CUPSEntityContractDescriptionId = CECD.Id
+		  LEFT JOIN Contract.ContractDescriptions AS CD ON CECD.ContractDescriptionId = CD.Id
+		  LEFT OUTER JOIN Contract.CupsSubgroup csg ON CE.CUPSSubGroupId = csg.Id
+		  LEFT OUTER JOIN Contract.CupsGroup cgR ON csg.CupsGroupId = cgR.Id) 
+AS G ON G.CodGrupo = GA.CODE
+AND G.Cups = A.CODSERIPS
+AND A.IDDESCRIPCIONRELACIONADA = G.IdRelacion
+LEFT JOIN
+              (
+                  SELECT EST.NUMEFOLIO, 
+                         EST.IPCODPACI PACIENTE, 
+                         ESTADIO
+                  FROM DBO.INDIAGNOH AS EST WITH(NOLOCK)
+                       INNER JOIN
+                  (
+                      SELECT MIN(NUMEFOLIO) NUMEFOLIO, 
+                             IPCODPACI
+                      FROM DBO.INDIAGNOH
+                      WHERE ESTADIO IS NOT NULL
+                            AND ESTADIO NOT IN(93, 98, 99)
+                      GROUP BY IPCODPACI
+                  ) FE ON EST.NUMEFOLIO = FE.NUMEFOLIO
+                          AND EST.IPCODPACI = FE.IPCODPACI --CONSULTA DE PRIMER ESTADIO 20201123
+                  WHERE ESTADIO IS NOT NULL
+              ) ESTA ON ING.IPCODPACI = ESTA.PACIENTE
+GROUP BY A.CODSERIPS, B.DESSERIPS, SERREASIT, ESTSERIPS, a.IPCODPACI, A.NUMINGRES, i.IPNOMCOMP, i.IPFECNACI, cecd.Id, cd.Id, cd.Code, cd.Name, E.NOMCENATE, 
+A.UFUCODIGO, D.UFUDESCRI, A.NUMEFOLIO, PRO.CODPROSAL, PRO.NOMMEDICO, MANEXTPRO, A.FECORDMED, CG.Code + '-' + CG.Name, CSG.CODE + '-' + CSG.Name, 
+ESPMED.DESESPECI, DIAG.CODDIAGNO, DIAG.NOMDIAGNO, EA.Code + ' - ' + EA.Name, GA.CODE + ' - ' + GA.NAME, GA.LiquidationType, EST.ESTADIO, GA.CODE, 
+A.IDDESCRIPCIONRELACIONADA, G.Contratado, G.Cotizado, IIF(G.CodGrupo IS NULL, 'No', 'Si'), ESTA.ESTADIO, I.IPTIPODOC, I.IPTELEFON, I.IPTELMOVI,
+--IN V1
+PQX.FECHORAIN,PRISERIPS,IQX.FECHORINI,PQX.FECHACAN,CAN.DESCAUCAN,FAC.InvoiceNumber,A.FECHAANULA,A.MOTIVOANULA
+--FN V1
+              ---------
+              UNION ALL
+              ---------
+SELECT RTRIM(E.NOMCENATE) [CENTRO ATENCION], 
+A.UFUCODIGO + ' - ' + RTRIM(D.UFUDESCRI) AS [UNIDAD FUNCIONAL], 
+CG.Code + '-' + CG.Name [GRUPO], 
+CSG.CODE + '-' + CSG.Name [SUBGRUPO], 
+A.CODSERIPS [CODIGO CUPS], 
+RTRIM(B.DESSERIPS) AS [DESCRIPCION SERVICIO], 
+ISNULL(cd.Code + ' - ' + cd.Name, '') [DESCRIPCION RELACIONADA], 
+A.FECORDMED AS [FECHA SOLICITUD],
+CASE I.IPTIPODOC WHEN '1'THEN 'CC'
+				 WHEN '2'THEN 'CE'
+				 WHEN '3'THEN 'TI'
+				 WHEN '4'THEN 'RC'
+				 WHEN '5'THEN 'PA'
+				 WHEN '6'THEN 'AS'
+				 WHEN '7'THEN 'MS'
+				 WHEN '8'THEN 'NU'
+				 WHEN '9'THEN 'NV'
+				 WHEN '10'THEN 'CD'
+				 WHEN '11'THEN 'SC'
+				 WHEN '12'THEN 'PE' END AS [TIPO IDENTIFICACION], 
+a.IPCODPACI AS [IDENTIFICACION], 
+I.IPTELEFON AS [TELEFONO FIJO], 
+I.IPTELMOVI AS [TELEFONO MOVIL], 
+'Hijo ' + CAST(rn.NUMHIJREG AS VARCHAR(20)) AS [PACIENTE], 
+CAST(I.IPFECNACI as DATE) AS [FECHA DE NACIMIENTO],
+DATEDIFF(YEAR, I.IPFECNACI, GETDATE()) AS [EDAD],
+INGMH.NUMINGRES AS [INGRESO],
+A.NUMEFOLIO AS FOLIO, 
+/*IN V2 CASE WHEN B..SERREASIT = '1'THEN 'Estudios Realizados en Sitio'
+     WHEN A.ESTSERIPS IN('2', '3', '4')THEN 'Estudios Realizados'
+     WHEN A.ESTSERIPS = '6'THEN 'Anulado'ELSE 'Estudios No Realizados'END AS ESTADO, */
+CASE WHEN B.SERREASIT = '1'THEN 'Estudios Realizados en Sitio'
+     WHEN A.ESTSERIPS='4'THEN 'Estudios Realizados'
+	 WHEN A.ESTSERIPS='2' THEN 'Sala Programada'
+	 WHEN A.ESTSERIPS='3' THEN 'Cancelado'
+     WHEN A.ESTSERIPS = '6'THEN 'Anulado'ELSE 'Estudios No Realizados'END AS ESTADO, --FN V2
+SUM(A.CANSERIPS) AS CANTIDAD, 
+PRO.CODPROSAL [ID PROFESIONAL], 
+PRO.NOMMEDICO AS PROFESIONAL, 
+ESPMED.DESESPECI ESPECIALIDAD, 
+DIAG.CODDIAGNO CIE10, 
+DIAG.NOMDIAGNO DIAGNOSTICO,
+CASE ESTA.ESTADIO WHEN 0 THEN 'ESTADIO CLÍNICO (EC) 0 (TUMOR IN SITU)'
+					WHEN 1 THEN 'EC I O 1'
+					WHEN 2 THEN 'EC IA O 1A'
+					WHEN 3 THEN 'EC IA1'
+					WHEN 4 THEN 'EC IA2'
+					WHEN 5 THEN 'EC IB O 1B'
+					WHEN 6 THEN 'EC IB1'
+					WHEN 7 THEN 'EC IB2'
+					WHEN 8 THEN 'EC IC O 1C'
+					WHEN 9 THEN 'EC IS O 1S'
+					WHEN 10 THEN 'EC II O 2'
+					WHEN 11 THEN 'EC IIA O 2A'
+					WHEN 12 THEN 'EC IIA1'
+					WHEN 13 THEN 'EC IIA2'
+					WHEN 14 THEN 'EC IIB O 2B'
+					WHEN 15 THEN 'EC IIC O 2C'
+					WHEN 16 THEN 'EC III O 3'
+					WHEN 17 THEN 'EC IIIA O 3A'
+					WHEN 18 THEN 'EC IIIB O 3B'
+					WHEN 19 THEN 'EC IIIC O 3C'
+					WHEN 20 THEN 'EC IV O 4'
+					WHEN 21 THEN 'EC IVA O 4A'
+					WHEN 22 THEN 'EC IVB O 4B'
+					WHEN 23 THEN 'EC IVC O 4C'
+					WHEN 24 THEN 'EC 4S (PARA NEUROBLASTOMA)'
+					WHEN 25 THEN 'EC  V O 5'
+					WHEN 26 THEN 'EC ESTADIO IAB'
+					WHEN 55 THEN 'PERSONA CON ASEGURAMIENTO (RÉGIMEN SUBSIDIADO O CONTRIBUTIVO Y QUE NO SON PPNA) QUE RECIBIÓ SERVICIOS DE SALUD POR PARTE DEL ENTE TERRITORIALDURANTE EL PERIODO DE REPORTE'
+					WHEN 93 THEN 'SIN INFORMACIÓN DE ESTADIFICACIÓN EN HISTORIA CLÍNICA'
+					WHEN 98 THEN 'NO APLICA (ES CÁNCER DE PIEL BASOCELULAR, ES CÁNCER HEMATOLÓGICO O ES CÁNCER EN SNC, EXCEPTO NEUROBLASTOMA)'
+					WHEN 99 THEN 'DESCONOCIDO, EL DATO DE ESTA VARIABLE NO SE ENCUENTRA DESCRITO EN LOS SOPORTES CLÍNICOS' ELSE '' END ESTADIO,
+CASE WHEN MANEXTPRO = 0 THEN 'HOSPITALARIO' ELSE 'AMBULATORIO' END AS [TIPO SOLICITUD],
+--IN V1
+CASE PRISERIPS WHEN 1 THEN 'URGENTE' 
+WHEN 2 THEN 'RUTINARIO'
+WHEN 3 THEN 'NORMAL' 
+WHEN 4 THEN 'DEFINIR CONDUCTA'END AS [PRIORIDAD DEL SERVICIO],
+--FN V1
+EA.Code + ' - ' + EA.Name AS [ENTIDAD ADMINISTRADORA], 
+GA.CODE + ' - ' + GA.NAME [GRUPO ATENCION],
+CASE GA.LiquidationType
+WHEN 1
+THEN 'Pago por Servicios'
+WHEN 2
+THEN 'PGP'
+WHEN 3
+THEN 'Factura Global'
+WHEN 4
+THEN 'Capitacion Global'
+WHEN 5
+THEN 'CONTROL'
+END [TIPO CONTRATO], 
+'PROCEDIMIENTOS QX' [TIPO ORDEN], 
+IIF(G.CodGrupo IS NULL, 'No', 'Si') CUBIERTO, 
+ISNULL(G.Contratado, 'No') CONTRATADO, 
+ISNULL(G.Cotizado, 'No') COTIZADO, 
+GA.CODE [CODIGO GRUPO], 
+A.IDDESCRIPCIONRELACIONADA, 
+--IN V1
+PQX.FECHORAIN [FECHA DE PROGRAMACION],
+ISNULL(A.FECHAANULA,PQX.FECHACAN) AS [FECHA CANCELACION PROG],
+ISNULL(A.MOTIVOANULA,CAN.DESCAUCAN) AS [MOTIVO DE CANCELACION],
+IQX.FECHORINI [FECHA DEL PROCEDEIMIENTO],
+FAC.InvoiceNumber AS FACTURA,
+--FN V1
+CAST(A.FECORDMED AS DATE) [FECHA BUSQUEDA]
+FROM dbo.HCORDPROQ A
+--in v1
+LEFT join AGEPROGQX PQX on a.AUTO=PQX.AUTOHCORDPROQ 
+LEFT JOIN AGCACANQX CAN ON CAN.CODCACANQ=PQX.CODCAUCAN
+LEFT JOIN dbo.HCQXINFOR IQX ON A.NUMINGRES=IQX.NUMINGRES AND A.CODSERIPS=IQX.CODSERIPS
+--FN V1
+JOIN dbo.INCUPSIPS B ON A.CODSERIPS = B.CODSERIPS
+JOIN dbo.HCINGRESORECNAC INGMH ON a.NUMINGRES = INGMH.NUMINGRESHIJO
+JOIN dbo.HCRECINAC RN ON INGMH.NUMINGRESHIJO = rn.NUMINGRESHIJO
+JOIN dbo.ADINGRESO AS ING ON ING.NUMINGRES = INGMH.NUMINGRESHIJO
+JOIN DBO.INPACIENT I WITH(NOLOCK) ON A.IPCODPACI = I.IPCODPACI
+JOIN dbo.INUNIFUNC D ON A.UFUCODIGO = D.UFUCODIGO
+JOIN dbo.ADCENATEN E ON A.CODCENATE = E.CODCENATE
+JOIN dbo.INPROFSAL PRO ON A.CODPROSAL = PRO.CODPROSAL
+JOIN Contract.CUPSEntity AS CUPS WITH(NOLOCK) ON CUPS.Code = B.CODSERIPS
+JOIN Contract.CupsSubgroup AS CSG WITH(NOLOCK) ON CSG.Id = CUPS.CUPSSubGroupId
+JOIN Contract.CupsGroup AS CG WITH(NOLOCK) ON CG.Id = CSG.CupsGroupId
+JOIN dbo.HCHISPACA HIS WITH(NOLOCK) ON A.NUMINGRES = HIS.NUMINGRES
+                                AND A.NUMEFOLIO = HIS.NUMEFOLIO
+JOIN dbo.INESPECIA AS ESPMED WITH(NOLOCK) ON ESPMED.CODESPECI = HIS.CODESPTRA
+JOIN dbo.INDIAGNOS AS DIAG WITH(NOLOCK) ON DIAG.CODDIAGNO = HIS.CODDIAGNO
+JOIN Contract.CareGroup AS GA WITH(NOLOCK) ON GA.Id = ING.GENCAREGROUP
+JOIN Contract.HealthAdministrator AS EA WITH(NOLOCK) ON EA.Id = ing.GENCONENTITY
+LEFT JOIN Contract.CUPSEntityContractDescriptions cecd ON cecd.Id = a.IDDESCRIPCIONRELACIONADA
+LEFT JOIN Contract.ContractDescriptions cd ON cd.Id = cecd.ContractDescriptionId LEFT JOIN
+Billing.ServiceOrder ORD ON ORD.Id=A.GENSERVICEORDER LEFT JOIN
+Billing.ServiceOrderDetail ORDD ON ORD.Id=ORDD.ServiceOrderId LEFT JOIN
+Billing.InvoiceDetail FACD ON ORDD.ID=FACD.ServiceOrderDetailId LEFT JOIN
+Billing.Invoice FAC ON FACD.InvoiceId=FAC.Id LEFT JOIN 
+dbo.INDIAGNOP AS EST WITH(NOLOCK) ON A.IPCODPACI = EST.IPCODPACI AND A.NUMINGRES = EST.NUMINGRES
+																 AND EST.NUMEFOLIO = A.NUMEFOLIO
+																 AND EST.ESTADIO IS NOT NULL LEFT JOIN
+              (
+                  SELECT CG.Code AS CodGrupo, 
+                         CG.Name AS GrupoAtencion, 
+                         CON.Code AS CodContrato, 
+                         CON.ContractName AS NombreContrato, 
+                         PT.Code AS CodPlantiProce, 
+                         PT.Name AS PlantillaProcedimiento, 
+                         cgR.Code AS CodigoGrupo, 
+                         cgR.Name AS Grupo, 
+                         csg.Code AS CodSubGrupo, 
+                         csg.Name AS SubGrupo, 
+                         CE.Code AS Cups, 
+                         CE.Description AS DescripcionCups, 
+                         CD.Code AS CodRelacion, 
+                         CD.Name AS DescripcionRelacionada,
+                         CASE PC.Contracted
+                             WHEN 1
+                             THEN 'Si'
+                             ELSE 'No'
+                         END AS Contratado,
+                         CASE PC.Quoted
+                             WHEN 1
+                             THEN 'Si'
+                             ELSE 'No'
+                         END AS Cotizado, 
+                         CECD.Id AS IdRelacion
+                  FROM Contract.CareGroup AS CG
+                       INNER JOIN Contract.Contract AS CON ON CG.ContractId = CON.Id
+                       INNER JOIN Contract.ProcedureTemplate AS PT ON CG.ProcedureTemplateId = PT.Id
+                       INNER JOIN Contract.ProcedureCups AS PC ON PT.Id = PC.ProceduresTemplateId
+                       INNER JOIN Contract.CUPSEntity AS CE ON PC.CupsId = CE.Id
+                       LEFT OUTER JOIN CONTRACT.CUPSEntityContractDescriptions AS CECD ON PC.CUPSEntityContractDescriptionId = CECD.Id
+                       LEFT JOIN Contract.ContractDescriptions AS CD ON CECD.ContractDescriptionId = CD.Id
+                       LEFT OUTER JOIN Contract.CupsSubgroup csg ON CE.CUPSSubGroupId = csg.Id
+                       LEFT OUTER JOIN Contract.CupsGroup cgR ON csg.CupsGroupId = cgR.Id
+              ) AS G ON G.CodGrupo = GA.CODE
+                        AND G.Cups = A.CODSERIPS
+                        AND A.IDDESCRIPCIONRELACIONADA = G.IdRelacion
+                   LEFT JOIN
+              (
+                  SELECT EST.NUMEFOLIO, 
+                         EST.IPCODPACI PACIENTE, 
+                         ESTADIO
+                  FROM DBO.INDIAGNOH AS EST WITH(NOLOCK)
+                       INNER JOIN
+                  (
+                      SELECT MIN(NUMEFOLIO) NUMEFOLIO, 
+                             IPCODPACI
+                      FROM DBO.INDIAGNOH
+                      WHERE ESTADIO IS NOT NULL
+                            AND ESTADIO NOT IN(93, 98, 99)
+                      GROUP BY IPCODPACI
+                  ) FE ON EST.NUMEFOLIO = FE.NUMEFOLIO
+                          AND EST.IPCODPACI = FE.IPCODPACI --CONSULTA DE PRIMER ESTADIO 20201123
+                  WHERE ESTADIO IS NOT NULL
+              ) ESTA ON ING.IPCODPACI = ESTA.PACIENTE
+GROUP BY A.CODSERIPS, B.DESSERIPS, SERREASIT, ESTSERIPS, a.IPCODPACI, i.IPFECNACI, INGMH.NUMINGRES, rn.NUMHIJREG, cecd.Id, cd.Id, cd.Code, cd.Name, E.NOMCENATE, 
+A.UFUCODIGO, D.UFUDESCRI, A.NUMEFOLIO, PRO.CODPROSAL, PRO.NOMMEDICO, MANEXTPRO, A.FECORDMED, CG.Code + '-' + CG.Name, CSG.CODE + '-' + CSG.Name, 
+ESPMED.DESESPECI, DIAG.CODDIAGNO, DIAG.NOMDIAGNO, EA.Code + ' - ' + EA.Name, GA.CODE + ' - ' + GA.NAME, GA.LiquidationType, EST.ESTADIO, 
+GA.CODE, A.IDDESCRIPCIONRELACIONADA, G.Contratado, G.Cotizado, IIF(G.CodGrupo IS NULL, 'No', 'Si'), ESTA.ESTADIO, I.IPTIPODOC, I.IPTELEFON, 
+I.IPTELMOVI,
+--in v1
+PQX.FECHORAIN,PRISERIPS,IQX.FECHORINI,PQX.FECHACAN,CAN.DESCAUCAN,FAC.InvoiceNumber,A.FECHAANULA,A.MOTIVOANULA
+--fn v1
+)
+          SELECT CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY, 
+                 *,
+				 YEAR([FECHA BUSQUEDA]) AS 'AÑO FECHA BUSQUEDA', 
+				 MONTH([FECHA BUSQUEDA]) AS 'MES AÑO FECHA BUSQUEDA', 
+				 CASE MONTH([FECHA BUSQUEDA]) 
+				      WHEN 1 THEN 'ENERO'	  
+					  WHEN 2 THEN 'FEBRERO'
+					  WHEN 3 THEN 'MARZO'
+					  WHEN 4 THEN 'ABRIL'
+					  WHEN 5 THEN 'MAYO'
+					  WHEN 6 THEN 'JUNIO'				 
+					  WHEN 7 THEN 'JULIO'
+					  WHEN 8 THEN 'AGOSTO'
+					  WHEN 9 THEN 'SEPTIEMBRE'
+					  WHEN 10 THEN 'OCTUBRE'
+					  WHEN 11 THEN 'NOVIEMBRE'
+					  WHEN 12 THEN 'DICIEMBRE' END AS 'MES NOMBRE FECHA BUSQUEDA', 
+				 DAY([FECHA BUSQUEDA]) AS 'DIA FECHA BUSQUEDA',
+				 CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+          FROM CTE_ORDENAMIENTO_PROCEDIMIENTOS_QX
+		  where paciente not like '%indigo%'

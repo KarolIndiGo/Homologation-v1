@@ -1,0 +1,36 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: ViewCamasHSJ
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+
+
+CREATE VIEW [Report].[ViewCamasHSJ]
+AS
+SELECT CEN.NOMCENATE 'CENTRO DE ATENCION', CAM.UFUCODIGO 'COD.UF',FUN.UFUDESCRI 'UNIDAD FUNCIONAL',CAM.NUMCAMHOS 'COD. CAMA', 
+CASE ESTADCAMA WHEN 1 THEN 'Libre'
+WHEN 2 THEN 'Asignada'
+WHEN 3 THEN 'Inactiva'
+WHEN 4 THEN 'En Mantenimiento'
+WHEN 5 THEN 'En Aislamiento'
+WHEN 6 THEN 'Reservada sin Confirmar'
+WHEN 7 THEN 'Reservada Confirmada' END 'ESTADO',
+
+CASE CAM.UFUCODIGO WHEN 1111001   THEN 'Urgencias-Observacion' 
+WHEN 1114001    THEN 'Salas de Cirugía'
+ELSE 'Hospitalización' END 'TIPO DE CAMA'
+
+FROM DBO.CHCAMASHO CAM
+
+INNER JOIN DBO.INUNIFUNC FUN ON FUN.UFUCODIGO=CAM.UFUCODIGO
+LEFT JOIN DBO.ADCENATEN CEN ON CEN.CODCENATE=CAM.CODCENATE
+
+

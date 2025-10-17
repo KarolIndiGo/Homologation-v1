@@ -1,0 +1,67 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_CONTROLPOSTPARTO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_CONTROLPOSTPARTO]
+AS
+SELECT 
+AGA.FECHORAIN AS FechaCita,
+INP.IPCODPACI AS Identificacion, 
+INP.IPNOMCOMP AS NombrePaciente,
+case INP.IPSEXOPAC 
+when 1
+then 'Masculino'
+when 2
+then 'Femenino'
+end AS Sexo,  
+cast(INP.IPFECNACI as date)AS FNacimiento,
+INP.IPDIRECCI AS Direccion,
+INMU.MUNNOMBRE AS Municipio, 
+INP.IPTELEFON AS Tel1, 
+INP.IPTELMOVI AS Tel2, 
+INES.DESESPECI AS Especialidad, 
+INPR.NOMMEDICO AS Médico, 
+
+CASE WHEN AGC.FECREGSIS IS NULL THEN  AGA.FECREGSIS
+ELSE AGC.FECREGSIS END AS '1SOLICITUD',
+--AGA.FECREGSIS AS '1SOLICITUD',--FECREGSIS
+AGA.FECITADES AS '2DESEADA', --FECITADES
+AGA.FECHORAIN AS '3ASIGNACION', --FECHORAIN
+DATEDIFF(d, (CASE WHEN AGC.FECREGSIS IS NULL THEN  AGA.FECREGSIS
+ELSE AGC.FECREGSIS END), AGA.FECHORAIN) AS Dias1, 
+DATEDIFF(d, AGA.FECITADES, AGA.FECHORAIN) AS Dias2, 
+AGAC.DESACTMED AS Acitvidad,
+AGA.CODUSUASI AS 'Codigo Asigno la Cita Medica',
+prs.Fullname as 'Nombre Asigno Cita Medica', 
+CASE AGA.CODESTCIT
+WHEN 0 THEN 'Asignada'
+WHEN 1 THEN 'Cumplida'
+WHEN 2 THEN 'Incumplida'
+WHEN 3 THEN 'PreAsignada'
+WHEN 4 THEN 'Cita Cancelada' END AS 'ESTADO CITA' 
+FROM            dbo.INPACIENT AS INP INNER JOIN 
+
+                         dbo.INENTIDAD AS INE ON INP.CODENTIDA = INE.CODENTIDA INNER JOIN
+                         dbo.AGASICITA AS AGA ON INP.IPCODPACI = AGA.IPCODPACI INNER JOIN
+                         dbo.INPROFSAL AS INPR ON AGA.CODPROSAL = INPR.CODPROSAL INNER JOIN
+                         dbo.INESPECIA AS INES ON AGA.CODESPECI= INES.CODESPECI INNER JOIN
+                         dbo.INUBICACI AS INU ON INP.AUUBICACI = INU.AUUBICACI INNER JOIN
+                         dbo.INMUNICIP AS INMU ON INU.DEPMUNCOD = INMU.DEPMUNCOD INNER JOIN
+                         dbo.AGACTIMED AS AGAC ON AGA.CODACTMED = AGAC.CODACTMED LEFT OUTER JOIN
+                         dbo.AGCITESPE AS AGCI ON AGA.CODESPECI = AGCI.CODESPECI AND AGA.IPCODPACI = AGCI.IPCODPACI inner join
+       [Security].[User] as usr on usr.UserCode=AGA.CODUSUASI inner join
+       [Security].[Person] as prs on prs.Id=usr.IdPerson left join
+       Contract.HealthAdministrator AS HA ON HA.Id=INP.GENCONENTITY  LEFT JOIN
+       AGCITAESP AS AGC ON AGA.CODAUTONU=AGC.IDCITA
+
+

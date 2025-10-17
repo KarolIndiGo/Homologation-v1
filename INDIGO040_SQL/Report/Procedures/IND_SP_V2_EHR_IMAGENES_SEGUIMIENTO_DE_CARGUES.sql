@@ -1,0 +1,28 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: IND_SP_V2_EHR_IMAGENES_SEGUIMIENTO_DE_CARGUES
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE PROCEDURE [Report].[IND_SP_V2_EHR_IMAGENES_SEGUIMIENTO_DE_CARGUES] 
+ @IDENTIFICACION AS CHAR(25),
+ @INGRESO AS CHAR(25)
+AS
+
+SELECT SO.PatientCode 'IDENTIFICACION',PAC.IPNOMCOMP 'PACIENTE',CAST(ING.IFECHAING AS DATE) 'FECHA INGRESO' ,SO.AdmissionNumber 'INGRESO',CAST(ING.IFECHAING AS DATE) 'FECHA INGRESO',FU.Name 'UNIDAD FUNCIONAL',
+CAST(SOD.ServiceDate AS DATE) 'FECHA DE SERVICIO' ,
+CUPS.Code 'CUPS',
+CUPS.Description 'DESCRIPCION CUPS',SOD.InvoicedQuantity 'CANTIDAD',SOD.TotalSalesPrice 'VALOR UNITARIO' ,SOD.GrandTotalSalesPrice 'VALOR TOTAL',PRO.NOMMEDICO  'PROFESIONAL'
+FROM Billing .ServiceOrder SO WITH (NOLOCK)
+INNER JOIN Billing .ServiceOrderDetail AS SOD WITH (NOLOCK) ON SO.Id =SOD.ServiceOrderId 
+INNER JOIN Billing.ServiceOrderDetailDistribution sodd WITH (NOLOCK) on sodd.ServiceOrderDetailId =sod.id
+INNER JOIN Billing.RevenueControlDetail rcd WITH (NOLOCK) ON sodd.RevenueControlDetailId = rcd.Id
+INNER JOIN Billing.RevenueControl rc WITH (NOLOCK) on rc.Id =rcd.RevenueControlId 
+INNER JOIN DBO.INPACIENT AS PAC WITH (NOLOCK) ON PAC.IPCODPACI =SO.PatientCode 
+INNER JOIN DBO.ADINGRESO AS ING WITH (NOLOCK) ON ING.NUMINGRES =SO.AdmissionNumber 
+INNER JOIN Payroll.FunctionalUnit fu WITH (NOLOCK) on fu.Id = sod.PerformsFunctionalUnitId
+INNER JOIN Contract .CUPSEntity AS CUPS WITH (NOLOCK) ON CUPS.Id =SOD.CUPSEntityId 
+LEFT JOIN DBO.INPROFSAL AS PRO WITH (NOLOCK) ON PRO.CODPROSAL =SOD.PerformsHealthProfessionalCode 
+
+WHERE  SO.PatientCode =@IDENTIFICACION AND SO.AdmissionNumber =@INGRESO

@@ -1,0 +1,147 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: IND_SP_V2_ERP_RADICACION_FACTURAS
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE PROCEDURE [Report].[IND_SP_V2_ERP_RADICACION_FACTURAS] 
+
+ @FECHA AS DATE
+
+AS
+
+
+WITH CTE_CARTERA
+AS
+(
+  SELECT DISTINCT CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,CI.NAME 'CIUDAD',RTRIM(isnull(c.NOMCENATE,'SOCIEDAD DE CIRUGIA DE BOGOTA HOSPITAL DE SAN JOSE')) AS [CENTRO DE ATENCION],
+		CASE ar.PortfolioStatus
+			WHEN 1 THEN 'SIN RADICAR'
+			WHEN 2 THEN 'RADICADA SIN CONFIRMAR'
+			ELSE 'RADICADA ENTIDAD' END [ESTADO CARTERA],tp.Nit NIT,tp.Name [TERCERO],con.contractnumber AS [CONTRATO],	ISNULL(cg.Name,'SALDO INICIAL') [GRUPO DE ATENCION],
+		       CASE CG.EntityType WHEN 1 THEN 'EPS Contributivo' 
+					  WHEN 2 THEN 'EPS Subsidiado'
+					  WHEN 3 THEN 'ET Vinculados Municipios' 
+					  WHEN 4 THEN 'ET Vinculados Departamentos' 
+					  WHEN 5 THEN 'ARL Riesgos Laborales' 
+					  WHEN 6 THEN 'MP Medicina Prepagada'
+					  WHEN 7 THEN 'IPS Privada' 
+					  WHEN 8 THEN 'IPS Publica' 
+					  WHEN 9 THEN 'Regimen Especial' 
+					  WHEN 10 THEN 'Accidentes de transito' 
+					  WHEN 11 THEN 'Fosyga' 
+					  WHEN 12 THEN 'Otros'
+					  WHEN 13 THEN 'Aseguradoras' 
+					  WHEN 99 THEN 'Particulares' ELSE 'Otros' END [REGIMEN],
+			
+			CASE ar.AccountReceivableType 
+			WHEN 1 THEN 'FACTURACION BASICA' 
+			WHEN 2 THEN 'FACTURACION SALUD' 
+			WHEN 3 THEN 'IMPUESTO INDUSTRIA Y COMERCIO'
+			WHEN 4 THEN 'PAGARES' 
+			WHEN  5 THEN 'ACUERDO DE PAGOS' 
+			WHEN 6 THEN 'DOCUMENTOS DE PAGO A CUOTA MODERADORA' 
+			WHEN 7 THEN 'FACTURA PRODUCTOS'
+			WHEN 8 THEN 'IMPUESTO PREDIAL' END AS [TIPO DOCUMENTO],ar.InvoiceNumber [NRO FACTURA],CAST(AR.Value AS NUMERIC) [VALOR FACTURA],CAST(AR.Balance AS NUMERIC) [SALDO FACTURA],
+		CAST(ar.AccountReceivableDate AS DATE) [FECHA FACTURA], ar.ThirdPartyId,CASE ar.Status	WHEN 3 THEN 'ANULADO' ELSE 'FACTURADO' END [ESTADO FACTURA],
+		case ar.OpeningBalance 	when 1 then 'SI' ELSE 'NO' END AS [SALDO INICIAL] ,		i.InvoicedUser +' - '+ SU.NOMUSUARI AS [USUARIO FACTURO],cat.Name [CATEGORIA],
+		CAST(i.initialdate AS DATE) AS [FECHA INGRESO],	CAST(i.outputdate AS DATE) AS [FECHA EGRESO CORTE],DocumentType,AR.CustomerId,i.AdmissionNumber 'INGRESO'
+
+  FROM Portfolio.AccountReceivable ar WITH (NOLOCK)
+  INNER JOIN Common.ThirdParty tp WITH (NOLOCK) ON tp.Id = ar.ThirdPartyId 
+  LEFT JOIN Contract.CareGroup cg WITH (NOLOCK) ON ar.CareGroupId = cg.Id
+  LEFT JOIN contract.contract AS con WITH (NOLOCK) ON cg.contractid = con.id
+  LEFT JOIN Billing.Invoice i WITH (NOLOCK) ON ar.InvoiceId = i.Id
+  LEFT JOIN DBO.SEGusuaru SU WITH (NOLOCK) ON SU.CODUSUARI = i.InvoicedUser
+  LEFT JOIN dbo.ADINGRESO a WITH(NOLOCK) ON i.AdmissionNumber = a.NUMINGRES
+  LEFT JOIN dbo.ADCENATEN c WITH(NOLOCK) ON a.CODCENATE = c.CODCENATE
+  --LEFT JOIN GeneralLedger.MainAccounts AS mar WITH (NOLOCK) ON mar.Id = ar.AccountWithoutRadicateId 
+  --LEFT JOIN Portfolio.GetRegimes() pgr ON mar.Number = pgr.AccountNumber       
+  LEFT JOIN Billing.InvoiceCategories cat WITH(NOLOCK) ON cat.id = i.InvoiceCategoryId
+  LEFT JOIN Common.OperatingUnit OU WITH(NOLOCK) ON OU.ID=ar.OperatingUnitId
+  LEFT JOIN Common.City CI WITH(NOLOCK) ON OU.IdCity=CI.Id
+  WHERE ar.Status <>3 AND I.DocumentType<>5-- and ar.invoicenumber='HSJS91594'
+),
+
+CTE_RADICACION
+AS
+(
+   SELECT rid.InvoiceNumber, MIN(ri.Id) Id, MIN(rid.RadicatedNumber) RadicatedNumber
+   FROM Portfolio.RadicateInvoiceC ri WITH (NOLOCK)
+   INNER JOIN Portfolio.RadicateInvoiceD rid WITH (NOLOCK) ON ri.Id = rid.RadicateInvoiceCId
+   INNER JOIN CTE_CARTERA AS FAC ON FAC.[NRO FACTURA] =RID.InvoiceNumber 
+   WHERE rid.State <>'4'
+   GROUP BY rid.InvoiceNumber
+),
+
+CTE_DEVOLUCION
+AS
+(
+  SELECT DEV.InvoiceNumber ,DEV.BalanceInvoice 'VALOR DEVOLUCION' ,CASE CAB.State WHEN  1 THEN 'DEVOLUCION SIN CONFIRMAR'
+  WHEN 2 THEN 'DEVOLUCION CONFIRMADO RADICADO' WHEN 3 THEN 'DEVOLUCION OFICIO CON RESPUESTA ENVIADA' WHEN 4 THEN 'ANULADO' END 'ESTADO DEVOLUCION',TER.ID tercero
+    FROM Glosas .GlosaDevolutionsReceptionD DEV WITH (NOLOCK)
+    INNER JOIN
+	(SELECT max(DEV.GlosaDevolutionsReceptionCId) IdCabeceraDev,DEV.InvoiceNumber 
+     FROM Glosas .GlosaDevolutionsReceptionD DEV WITH (NOLOCK)
+	 --WHERE dev.InvoiceNumber ='IND19626'
+     GROUP BY DEV.InvoiceNumber
+	) AS G ON G.IdCabeceraDev =DEV.GlosaDevolutionsReceptionCId AND G.InvoiceNumber =DEV.InvoiceNumber 
+	INNER JOIN Glosas.GlosaDevolutionsReceptionC AS cab WITH (NOLOCK) ON cab.Id =dev.GlosaDevolutionsReceptionCId
+	INNER JOIN Common.Customer as cli WITH (NOLOCK) on cli.Id =cab.CustomerId
+	INNER JOIN Common.ThirdParty AS TER WITH (NOLOCK) ON TER.Id =CLI.ThirdPartyId
+	where cab.State<>'4'
+),
+
+CTE_DATOS_FACTURACION_RADICACION
+AS
+(
+SELECT CAR.ID_COMPANY,CAR.CIUDAD,CAR.[CENTRO DE ATENCION],CAR.[SALDO INICIAL],car.[TIPO DOCUMENTO],
+
+IIF((CAR.DocumentType=3 OR CAR.DocumentType=6) OR (RI.RadicatedConsecutive IS NULL AND CAR.[SALDO FACTURA]=0 ) ,'RADICADA ENTIDAD',CAR.[ESTADO CARTERA])[ESTADO CARTERA],
+
+iif(dev.InvoiceNumber is null,'No','Si') [DEVOLUCION],CAR.[NIT],CAR.[TERCERO],ISNULL(cli.name,'PARTICULAR') 'ENTIDAD',CLI.EPSCode 'CODIGO EPS',CAR.[CONTRATO],
+CAR.[GRUPO DE ATENCION],CAR.[REGIMEN],CAR.[NRO FACTURA],CAR.[VALOR FACTURA],CAR.[SALDO FACTURA],CAR.[FECHA FACTURA],
+
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],RI.CreationDate) [FECHA CREACION RADICADO],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],ri.DocumentDate) [FECHA DOCUMENTO RADICADO],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],ri.RadicatedDate) [FECHA RADICACION],
+
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],
+   IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate)) [FECHA CONFIRMACION RADICADO],
+RI.RadicatedConsecutive [CONSECUTIVO RADICACION],CAR.[INGRESO],
+CAR.[ESTADO FACTURA],CAR.[USUARIO FACTURO],TRIM(RI.creationuser) + ' - ' + SUR.NOMUSUARI AS [USUARIO RADICO],
+CAR.[CATEGORIA],CAR.[FECHA INGRESO],CAR.[FECHA EGRESO CORTE],ri.Comment 'COMENTARIO RADICACION',
+YEAR(IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],
+   IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate))) 'AÑO CONFIRMACION RAD',
+MONTH(IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],
+   IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate))) 'MES CONFIRMACION RAD' ,
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],
+   
+   IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),
+    IIF([ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate))) 'FECHA BUSQUEDA'
+   
+   --ri.ConfirmDate)) 'FECHA BUSQUEDA',
+
+   --CAR.DocumentType
+
+FROM CTE_CARTERA CAR
+ LEFT JOIN CTE_RADICACION AS RIC ON RIC.InvoiceNumber =CAR.[NRO FACTURA]
+ LEFT JOIN Portfolio.RadicateInvoiceC ri WITH (NOLOCK) ON ric.Id = ri.Id
+ LEFT JOIN DBO.SEGusuaru SUR WITH (NOLOCK) ON SUR.CODUSUARI=ri.creationuser
+ LEFT JOIN CTE_DEVOLUCION AS DEV  ON DEV.InvoiceNumber =CAR.[NRO FACTURA] AND DEV.tercero = CAR.ThirdPartyId 
+ LEFT JOIN COMMON.Customer AS CLI WITH (NOLOCK)  ON CLI.ID=CAR.CustomerId
+ --WHERE CAR.DocumentType=1
+ --WHERE [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR')
+)
+
+SELECT FAC.*,
+ IIF(YEAR(FAC.[FECHA BUSQUEDA]) =YEAR(@FECHA) AND  MONTH(FAC.[FECHA BUSQUEDA])=MONTH(@FECHA),FAC.[VALOR FACTURA],0) 'VALOR CORTE MES ACTUAL',
+ IIF(YEAR(FAC.[FECHA BUSQUEDA]) =YEAR(DATEADD(MM, -1,@FECHA)) AND  MONTH(FAC.[FECHA BUSQUEDA])=MONTH(DATEADD(MM, -1,@FECHA)),FAC.[VALOR FACTURA],0) 'VALOR CORTE MES ANTERIOR',
+ IIF(FAC.[FECHA BUSQUEDA]<=DATEADD(MM, -2,@FECHA),FAC.[VALOR FACTURA],0) 'VALOR CORTE OTROS MESES VALOR FACTURA'
+
+FROM CTE_DATOS_FACTURACION_RADICACION FAC
+--WHERE  YEAR(FAC.[FECHA BUSQUEDA]) =@AÑO AND  MONTH(FAC.[FECHA BUSQUEDA])=@MES

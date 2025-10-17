@@ -1,0 +1,109 @@
+-- Workspace: SQLServer
+-- Item: INDIGO031 [SQL]
+-- ItemId: SPN
+-- Schema: ViewInternal
+-- Object: IND_PACIENTES_Documentos_Adjuntos
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE VIEW [ViewInternal].[IND_PACIENTES_Documentos_Adjuntos] 
+AS
+SELECT DISTINCT
+         CASE PA.IPTIPODOC WHEN 1 THEN 'CC' WHEN 2 THEN 'CE' WHEN 3  THEN 'TI' WHEN 4 THEN 'RC'  WHEN 5 THEN 'PA'  WHEN 6 THEN 'AS'  WHEN 7 THEN 'MS'  WHEN 8 THEN 'NU' END AS TIPO_DOCUMENTO,
+            DOC.IPCODPACI AS NUM_DOCUMENTO,
+            PA.IPNOMCOMP AS NOMBRE_PACIENTE,CASE PA.IPSEXOPAC
+                WHEN 1
+                THEN 'M'
+                WHEN 2
+                THEN 'F'
+                WHEN 3
+                THEN 'Í'
+            END AS "SEXO",
+            CA.NOMCENATE AS "CENTRO_ATENCION",
+           CASE
+                WHEN ca.codcenate IN(002, 003, 004, 005, 006, 007, 008, 009)
+                THEN 'Boyaca'
+                WHEN ca.codcenate IN(010, 011, 012, 013, 014)
+                THEN 'Meta'
+                WHEN ca.codcenate  in (015,016)
+                THEN 'Casanare'
+            END AS Regional,
+            
+            DOC.DESDOCALM AS NOMBRE_DOCUMENTO,
+            DOC.EXTEARCHI AS TIPO_ARCHIVO,
+            DOC.FECREGDOC AS FECHA_DE_CARGADO_DEL_DOCUMENTO,
+            CASE DOC.TIPARCPAC
+                WHEN '1' THEN 'PACIENTE'
+                WHEN '2' THEN 'INGRESO'
+                END AS CATEGORIA_DE_DOCUMENTO,
+            DOC.DESDOCALM AS "DESCRIPCION_DEL_ARCHIVO",
+            '' AS "CODIGO_DE_LA_ESPECIALIDAD",
+            '' AS "ESPECIALIDAD"
+           FROM dbo.INPACIDOC AS DOC
+           INNER JOIN dbo.INPACIENT AS PA ON PA.IPCODPACI = DOC.IPCODPACI
+          INNER JOIN DBO.ADCENATEN AS CA ON CA.CODCENATE = DOC.CODCENATE
+
+ 
+
+          WHERE DOC.FECREGDOC >= '2022/01/01 00:00:00'                             
+
+ 
+
+ UNION ALL
+
+ 
+
+        SELECT  DISTINCT
+           CASE PA.IPTIPODOC WHEN 1 THEN 'CC' WHEN 2 THEN 'CE' WHEN 3  THEN 'TI' WHEN 4 THEN 'RC'  WHEN 5 THEN 'PA'  WHEN 6 THEN 'AS'  WHEN 7 THEN 'MS'  WHEN 8 THEN 'NU' END AS TIPO_DOCUMENTO,
+            DOC.IPCODPACI AS NUM_DOCUMENTO,
+             PA.IPNOMCOMP AS NOMBRE_PACIENTE,
+             CASE PA.IPSEXOPAC
+                WHEN 1
+                THEN 'M'
+                WHEN 2
+                THEN 'F'
+                WHEN 3
+                THEN 'Í'
+            END AS "SEXO",
+            CA.NOMCENATE AS "CENTRO_ATENCION",
+            CASE  
+                WHEN DOC.UFUCODIGO LIKE 'B0%'  
+                THEN 'BOYACA'  
+                WHEN DOC.UFUCODIGO LIKE 'Met%'  
+                THEN 'META'  
+                WHEN DOC.UFUCODIGO LIKE 'Yop%'  
+                THEN 'CASANARE'  
+            END AS REGIONAL,
+             DOC.NOMARCADJ AS NOMBRE_DOCUMENTO,
+             DOC.ARCHEXTEN AS TIPO_ARCHIVO,
+             DOC.FECPROCES AS FECHA_DE_CARGADO_DEL_DOCUMENTO,         
+             CASE DOC.TIPODOCUM
+                WHEN '2' THEN 'LABORATORIO'
+                WHEN '3' THEN 'IMAGENOLOGIA'
+                WHEN '4' THEN 'PATOLOGIAS'
+                WHEN '5' THEN 'DECRETO_3047'
+                WHEN '6' THEN 'PLANTILLAS_DOCUMENTOS'
+                WHEN '7' THEN 'CONSENTIMIENTO_INFORMADO'
+                WHEN '8' THEN 'RESULTADOS_EXAMENES_SITIO'
+                WHEN '9' THEN 'LECTURA_IMAGENES'
+                WHEN '10' THEN 'SOLICITUDES'
+                WHEN '11' THEN 'FACTURAS_DE_VENTA'
+                WHEN '98' THEN 'OTROS_PROCEDIMIENTOS'
+                WHEN '99' THEN 'REFERENCIA'
+                END AS CATEGORIA_DE_DOCUMENTO,
+                DOC.OBSERDOCU AS "DESCRIPCION_DEL_ARCHIVO",
+                DOC.CODESPECI AS "CODIGO_DE_LA_ESPECIALIDAD",
+                ES.DESESPECI AS "ESPECIALIDAD"
+             FROM dbo.HCDOCUMAD AS DOC
+           INNER JOIN dbo.INPACIENT AS PA ON PA.IPCODPACI = DOC.IPCODPACI
+           INNER JOIN DBO.ADCENATEN AS CA ON CA.CODCENATE = DOC.CODCENATE
+           INNER JOIN dbo.INESPECIA AS ES ON ES.CODESPECI = DOC.CODESPECI
+        
+         WHERE DOC.FECPROCES >= '2022/01/01 00:00:00'
+
+ 
+
+          
+          

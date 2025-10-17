@@ -1,0 +1,65 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_NOTA_ADMINISTRATIVA_CIRUGIA
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_NOTA_ADMINISTRATIVA_CIRUGIA]
+AS
+SELECT DISTINCT
+    MAX(CH.FECREGSIS) OVER (PARTITION BY CH.IPCODPACI) AS 'Fecha',
+    CH.IPCODPACI AS 'Documento Paciente',
+    CH.NUMINGRES AS 'Número Ingreso',
+
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 
+            FROM NTNOTASADMINISTRATIVASC C
+            WHERE C.IPCODPACI = CH.IPCODPACI AND C.IDNOTAADMINISTRATIVA = 7
+        ) THEN 
+            NULLIF(
+                (SELECT TOP 1 C.FECHACREACION 
+                 FROM NTNOTASADMINISTRATIVASC C 
+                 WHERE C.IPCODPACI = CH.IPCODPACI AND C.IDNOTAADMINISTRATIVA = 7),
+                '1900-01-01 00:00:00.000'
+            )
+        ELSE 
+            NULL
+    END AS 'Fecha Creación Nota',
+
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 
+            FROM NTNOTASADMINISTRATIVASC C
+            WHERE C.IPCODPACI = CH.IPCODPACI AND C.IDNOTAADMINISTRATIVA = 7
+        ) THEN 
+            (SELECT TOP 1 CONCAT(RTRIM(C.CODUSUARI), ' - ', ISNULL(P.Fullname, ''))
+             FROM NTNOTASADMINISTRATIVASC C
+             LEFT JOIN Security.[User] U ON U.USERCODE = C.CODUSUARI
+             LEFT JOIN Security.Person P ON P.ID = U.IdPerson
+             WHERE C.IPCODPACI = CH.IPCODPACI AND C.IDNOTAADMINISTRATIVA = 7)
+        ELSE 
+            ''
+    END AS 'Usuario Crea Nota',
+    CM.DESCCAMAS AS 'Nombre Cama',
+	FUN.UFUDESCRI 'UNIDAD FUNCIONAL'
+
+FROM CHREGESTA CH
+LEFT JOIN CHCAMASHO CM ON CM.CODICAMAS = CH.CODICAMAS
+JOIN INUNIFUNC FUN ON FUN.UFUCODIGO = CM.UFUCODIGO
+WHERE CM.UFUCODIGO = 193 --AND CH.IPCODPACI = '12227022' ;
+
+
+
+ 
+
+

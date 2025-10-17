@@ -1,0 +1,111 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_SOLICITUDESAUDITORIALABORATORIO
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_SOLICITUDESAUDITORIALABORATORIO]
+AS
+     SELECT [FECHA ORDEN], 
+       [IDENTIFICACION], 
+       [NOMBRES], 
+       [INGRESO],
+       [UNIDAD], 
+       [CAMA], 
+       [ENTIDAD], 
+       [OBSERVACION], 
+	   [CODIGO MEDICO],
+	   [MEDICO SOLICITA],
+       [DESCRIPCION_ESP], 
+       [TipoExamen], 
+       [FOLIO], 
+       [CODIGORIPS], 
+       [DES_RIPS], 
+       [CANTIDAD], 
+       [OBSERVACION_RIPS]
+FROM
+(
+    ----IMAGENES--
+    SELECT DISTINCT 
+           A.FECORDMED AS [FECHA ORDEN], 
+           p.IPCODPACI AS [IDENTIFICACION], 
+           P.IPNOMCOMP AS [NOMBRES], 
+           U.UFUDESCRI AS [UNIDAD], 
+           I.NUMINGRES AS [INGRESO], 
+           C.DESCCAMAS AS [CAMA], 
+           E.NOMENTIDA AS [ENTIDAD], 
+           I.IOBSERVAC AS [OBSERVACION], 
+           A.CODPROSAL [CODIGO MEDICO],
+		   PR.NOMMEDICO [MEDICO SOLICITA],
+           es.DESESPECI AS [DESCRIPCION_ESP], 
+           SG.DESSUBIPS AS [TipoExamen], 
+           A.NUMEFOLIO AS [FOLIO], 
+           RTRIM(B.CODSERIPS) AS [CODIGORIPS], 
+           RTRIM(DESSERIPS) AS [DES_RIPS], 
+           A.CANSERIPS AS [CANTIDAD], 
+           A.OBSSERIPS [OBSERVACION_RIPS], 
+           a.ESTSERIPS
+    FROM dbo.HCORDLABO A 
+         INNER JOIN dbo.INCUPSIPS B  ON A.CODSERIPS = CAST(B.CODSERIPS AS VARCHAR)
+         INNER JOIN dbo.INCUPSSUB SG ON SG.CODGRUSUB = B.CODGRUSUB
+         INNER JOIN dbo.ADINGRESO I  ON I.NUMINGRES = A.NUMINGRES
+         INNER JOIN dbo.INPACIENT P ON P.IPCODPACI = i.IPCODPACI
+         INNER JOIN dbo.INPROFSAL pr ON A.CODPROSAL = pr.CODPROSAL
+         INNER JOIN dbo.INESPECIA es ON pr.CODESPEC1 = es.CODESPECI
+         INNER JOIN dbo.INENTIDAD E ON E.CODENTIDA = I.CODENTIDA
+         LEFT JOIN dbo.CHREGESTA CH ON CH.NUMINGRES = I.NUMINGRES
+                                               AND CH.REGESTADO = 1
+         LEFT JOIN dbo.CHCAMASHO C ON C.CODICAMAS = CH.CODICAMAS
+         LEFT JOIN dbo.INUNIFUNC AS U ON U.UFUCODIGO = A.UFUCODIGO
+         LEFT JOIN dbo.ADCONFSER S  ON S.CODSERIPS = A.CODSERIPS
+         LEFT JOIN dbo.ADAUTOSER ss  ON SS.IPCODPACI = a.IPCODPACI
+                                                        AND SS.NUMINGRES = A.NUMINGRES
+                                                        AND SS.CODSERIPS = A.CODSERIPS
+                                                        AND SS.NUMEFOLIO = A.NUMEFOLIO
+    WHERE B.CODSERIPS IN (CAST(901002 AS VARCHAR))
+
+    UNION ALL
+    ----PROCEDIMIENTO NQ--
+    SELECT DISTINCT 
+           A.FECORDMED AS [FECHA ORDEN], 
+           p.IPCODPACI AS [identificacion], 
+           P.IPNOMCOMP AS [NOMBRES], 
+           U.UFUDESCRI AS [UNIDAD], 
+           I.NUMINGRES AS [INGRESO], 
+           C.DESCCAMAS AS [CAMA], 
+           E.NOMENTIDA AS [ENTIDAD], 
+           I.IOBSERVAC AS [OBSERVACION], 
+           A.CODPROSAL [CODIGO MEDICO],
+		   PR.NOMMEDICO [MEDICO SOLICITA],
+           es.DESESPECI AS [DESCRIPCION_ESP], 
+           SG.DESSUBIPS AS [TipoExamen], 
+            ''AS [FOLIO], 
+           RTRIM(B.CODSERIPS) AS [CODIGORIPS], 
+           RTRIM(DESSERIPS) AS [DES_RIPS], 
+           A.CANSERIPS AS [CANTIDAD], 
+           ''  [OBSERVACION_RIPS], 
+           a.ESTSERIPS
+    FROM dbo.AMBORDIMA A 
+         INNER JOIN dbo.INCUPSIPS B  ON A.CODSERIPS = CAST(B.CODSERIPS AS VARCHAR)
+         INNER JOIN dbo.INCUPSSUB SG ON SG.CODGRUSUB = B.CODGRUSUB
+         INNER JOIN dbo.ADINGRESO I  ON I.NUMINGRES = A.NUMINGRES
+         INNER JOIN dbo.INPACIENT P ON P.IPCODPACI = i.IPCODPACI
+         INNER JOIN dbo.INPROFSAL pr ON A.CODPROSAL = pr.CODPROSAL
+         INNER JOIN dbo.INESPECIA es ON pr.CODESPEC1 = es.CODESPECI
+         INNER JOIN dbo.INENTIDAD E ON E.CODENTIDA = I.CODENTIDA
+         LEFT JOIN dbo.CHREGESTA CH ON CH.NUMINGRES = I.NUMINGRES
+                                               AND CH.REGESTADO = 1
+         LEFT JOIN dbo.CHCAMASHO C ON C.CODICAMAS = CH.CODICAMAS
+         LEFT JOIN dbo.INUNIFUNC AS U ON U.UFUCODIGO = A.UFUCODIGO
+         LEFT JOIN dbo.ADCONFSER S  ON S.CODSERIPS = A.CODSERIPS
+         LEFT JOIN dbo.ADAUTOSER ss  ON SS.IPCODPACI = a.IPCODPACI
+                                                        AND SS.NUMINGRES = A.NUMINGRES
+                                                        AND SS.CODSERIPS = A.CODSERIPS
+                                                        --AND SS.NUMEFOLIO = A.NUMEFOLIO
+   WHERE B.CODSERIPS IN (CAST(901002 AS VARCHAR))
+) AS aut;
+

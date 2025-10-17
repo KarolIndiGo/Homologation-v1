@@ -1,0 +1,20 @@
+-- Workspace: SQLServer
+-- Item: INDIGO036 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: IND_SP_V2_ERP_PARAMETROS_CONCEPTOS_FACTURACION_X_CA_UF
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+CREATE PROCEDURE [Report].[IND_SP_V2_ERP_PARAMETROS_CONCEPTOS_FACTURACION_X_CA_UF] 
+
+AS
+
+SELECT BO.Name 'CENTRO ATENCION',BC.Code 'CODIGO CONCEPTO FACTURACION', RTRIM(BC.Name) 'CONCEPTO FACTURACION' ,
+FU.Code 'CODIGO UNIDAD FUNCIONAL', RTRIM(FU.Name) 'UNIDAD FUNCIONAL',CC.Code 'CODIGO CENTRO COSTO', CC.Name 'CENTRO DE COSTO'  
+FROM Billing .BillingConceptCostCenter BCC WITH (NOLOCK)
+INNER JOIN Payroll .BranchOffice BO ON BO.Id =BCC.BranchOfficeId 
+INNER JOIN Billing .BillingConcept BC ON BC.Id =BCC.BillingConceptId 
+INNER JOIN Payroll .FunctionalUnit FU ON FU.Id =BCC.FunctionalUnitId 
+INNER JOIN Payroll .CostCenter AS CC ON CC.Id =BCC.CostCenterId

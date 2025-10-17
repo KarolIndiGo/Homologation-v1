@@ -1,0 +1,107 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: ViewMtrizFacturación
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+/*******************************************************************************************************************
+Nombre:[Report].[ViewMtrizFacturación] 
+Tipo:Vista
+Observacion: Se crea informe MATRIZ FACTURAS para enviar a las entidades correspondientes de salud
+Profesional: Nilsson Miguel Galindo Lopez
+Fecha:14-06-2024
+---------------------------------------------------------------------------
+Modificaciones
+_____________________________________________________________________________
+Version 2
+Persona que modifico:
+Fecha:
+Ovservaciones:
+--------------------------------------
+Version 3
+Persona que modifico:
+Fecha:
+Ovservaciones:
+***********************************************************************************************************************************/
+CREATE VIEW [Report].[ViewMtrizFacturación] AS 
+
+WITH
+
+CTE_SOLICITUDES AS
+(
+SELECT 
+RR.NUMINGRES,RR.CODESPECI
+FROM dbo.HCREFCONT RR
+WHERE CAST(RR.[AUTO] AS INT)=(SELECT MIN(CAST(A.AUTO AS INT)) FROM dbo.HCREFCONT A WHERE RR.NUMINGRES=A.NUMINGRES)
+),
+CTE_RECEPCIONES AS 
+(
+SELECT
+RR.NUMINGRES,RR.INESPECIAIDREMITE
+FROM
+dbo.HCREFRECEP RR
+WHERE RR.NUMINGRES IS NOT NULL
+)
+
+
+SELECT 
+FAC.InvoiceDate AS [FECHA FACTURA],
+CONVERT(VARCHAR(4),FAC.InvoiceNumber) AS [PREFIJO FACTURA],
+FAC.InvoiceNumber AS [NUMERO FACTURA],
+FACD.GrandTotalSalesPrice AS [VALOR DEL SERVICIO],
+FACD.ServiceDate AS [FECHA  PESTACION SERVICIO],
+FACD.SubTotalPatientSalesPrice AS [CUOTA COBRADA],
+FACD.GrandTotalTaxes AS IVA,
+ISNULL(PRO.CodeCUM,PRO.Code) AS [CUMS],
+PRO.[Name] AS [DESCRIPCION CUMS],
+ISNULL(GRU.[NAME],'PRODUCTOS') AS [TIPO DE SERVICIO],
+FAC.AdmissionNumber AS [NUMERO INGRESO],
+SOD.ServiceDate AS [FECHA DE ORDEN],
+SOD.AuthorizationNumber AS [NUMERO AUTORIZACION],
+TIP.SIGLA AS [TIPO IDENTIFICACION],
+PAC.IPCODPACI AS [NUMERO IDENTIFICACION],
+PAC.IPPRINOMB AS [PRIMER NOMBRE],
+PAC.IPSEGNOMB AS [SEGUNDO NOMBRE],
+PAC.IPPRIAPEL AS [PRIMER APELLIDO],
+PAC.IPSEGAPEL AS [SEGUNDO APELLIDO],
+PAC.IPTELMOVI AS [TELEFONO CELULAR],
+PAC.CORELEPAC AS [CORREO ELECTRONICO],
+ING.CODDIAING AS [CÓDIGO DIAGNOSTICO],
+TER.Nit AS [NIT PRESTADOR],
+COM.HealthEntityCode AS [CODIGO PRESTADOR],
+COM.Name AS [NOMBRE PRESTADOR],
+TIPP.SIGLA AS [TIPO IDENTIFICACION MEDICO],
+PROF.CODPROSAL AS [IDENTIFICACIÓN MEDICO],
+PROF.NOMMEDICO AS [NOMBRE MEDICO],
+ESPR.DESESPECI AS [ESPECIALIDAD REMITENTE],
+CUPS.Code AS [CODIGO CUPS],
+CUPS.Description AS [DESCRIPCION CUPS],
+FACD.InvoicedQuantity AS CANTIDAD,
+CAST(SOD.ServiceDate AS DATE) AS [FECHA ATENCION],
+CAST(SOD.ServiceDate AS time) AS [HORA ATENCION],
+'899999017' AS [NIT PRESTADOR ATENCION],
+'' AS [CODIGO PRESTADOR ATENCION],
+'SOCIEDAD DE CIRUGÍA DE BOGOTA HOSPITAL SAN JOSE' AS [NOMBRE PRESTADOR ATENCION],
+FAC.CUFE,
+cast(FAC.InvoiceDate as date) AS [FECHA BUSQUEDA]
+FROM 
+Billing.Invoice FAC 
+INNER JOIN Billing.InvoiceDetail FACD ON FAC.Id=FACD.InvoiceId
+INNER JOIN Billing.ServiceOrderDetail SOD ON FACD.ServiceOrderDetailId=SOD.Id
+INNER JOIN dbo.ADINGRESO ING ON FAC.AdmissionNumber=ING.NUMINGRES
+INNER JOIN dbo.INPACIENT PAC ON ING.IPCODPACI=PAC.IPCODPACI
+INNER JOIN dbo.ADTIPOIDENTIFICA TIP ON PAC.IPTIPODOC=TIP.CODIGO
+INNER JOIN CONTRACT.HEALTHADMINISTRATOR COM ON FAC.HealthAdministratorId=COM.Id
+INNER JOIN Common.ThirdParty TER ON COM.ThirdPartyId=TER.Id
+LEFT JOIN [Contract].CUPSEntity CUPS ON SOD.CUPSEntityId=CUPS.Id
+LEFT JOIN Inventory.InventoryProduct PRO ON SOD.ProductId=PRO.Id
+LEFT JOIN Billing.BillingGroup GRU ON CUPS.BillingGroupId=GRU.Id
+LEFT JOIN dbo.INPROFSAL PROF ON SOD.PerformsHealthProfessionalCode=PROF.CODPROSAL
+LEFT JOIN [Security].PERSON PER ON PROF.CODPROSAL=PER.IDENTIFICATION
+LEFT JOIN dbo.ADTIPOIDENTIFICA TIPP ON PER.IdentificationType=TIPP.CODIGO
+LEFT JOIN CTE_SOLICITUDES RR ON FAC.AdmissionNumber=RR.NUMINGRES
+LEFT JOIN CTE_RECEPCIONES RC ON FAC.AdmissionNumber=RC.NUMINGRES
+LEFT JOIN dbo.INESPECIA ESPR ON ISNULL(RR.CODESPECI,RC.NUMINGRES)=ESPR.CODESPECI

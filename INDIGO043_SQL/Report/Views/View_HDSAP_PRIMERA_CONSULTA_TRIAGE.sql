@@ -1,0 +1,61 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_PRIMERA_CONSULTA_TRIAGE
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_PRIMERA_CONSULTA_TRIAGE]
+AS
+
+
+
+WITH CTE_HCHISPACA AS (
+    SELECT 
+        hc.IPCODPACI,
+        hc.NUMINGRES,
+        hc.FECHISPAC,
+        hc.CODPROSAL,
+	
+        ROW_NUMBER() OVER (PARTITION BY IPCODPACI, NUMINGRES ORDER BY FECHISPAC) AS RowNum
+    FROM 
+        HCHISPACA hc
+
+)
+SELECT DISTINCT
+    cte.IPCODPACI DocumentoPaciente,
+	INP.IPPRIAPEL AS 'Primer Apellido',
+    INP.IPSEGAPEL AS 'Segundo Apellido',
+    INP.IPPRINOMB AS 'Primer Nombre',
+    INP.IPSEGNOMB AS 'Segundo Nombre',
+    cte.NUMINGRES Ingreso,
+    cte.FECHISPAC FechaConsulta,
+	DATEDIFF(MINUTE,TRI.TRIAFECHA,CTE.FECHISPAC) FechaTriageVSConsulta,
+    cte.CODPROSAL CodigoMedico,
+    P.NOMMEDICO MedicoConsulta,
+	UNI.UFUDESCRI UnidadFuncional,
+	ad.IFECHAING FechaIngresoPaciente,
+	TRI.TRIAGECLA ClasificacionTriage
+
+FROM 
+    CTE_HCHISPACA cte
+	INNER JOIN ADTRIAGEU TRI ON TRI.NUMINGRES = CTE.NUMINGRES
+    INNER JOIN dbo.INPROFSAL AS P ON cte.CODPROSAL = P.CODPROSAL
+	INNER JOIN dbo.INPACIENT AS INP ON INP.IPCODPACI = cte.IPCODPACI
+	INNER JOIN ADINGRESO AD ON AD.NUMINGRES = CTE.NUMINGRES
+	INNER JOIN dbo.INUNIFUNC uni on uni.UFUCODIGO = AD.UFUINGMED
+WHERE 
+    cte.RowNum = 1-- AND TRI.IPCODPACI = '83258347';
+
+  
+

@@ -1,0 +1,68 @@
+-- Workspace: SQLServer
+-- Item: INDIGO036 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: VW_ReportedeTraslados
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+/************REPORTE TRASLADOS********************/
+CREATE VIEW [Report].[VW_ReportedeTraslados] AS
+ SELECT 
+	CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,
+	FAT.Code AS 'COD_TRASLADO',
+	CASE FAT.TransferType WHEN 1 THEN 'Ubicacion' 
+					  WHEN 2 THEN 'Responsable' 
+					  WHEN 3 THEN 'Ubicacion y Responsable'
+					  END AS 'TIPO_TRASLADO',
+	P.Code AS 'PLACA',
+	FAT.DocumentDate AS 'FECHA',
+    P.Description AS 'NOMBRE_ACTIVO', 
+	RES.Code AS 'C_ENTREGA',
+	TP.Name AS 'P_ENTREGA',
+	REF.Code AS 'C_RECIBE',
+	TPF.Name AS 'P_RECIBE',
+	UI.Code AS 'U_INCIAL',
+	UI.Name AS 'UBICACION_INICIAL',
+	UF.Code AS 'U_FINAL',
+	UF.Name AS 'UBICACION_FINAL',
+	UFC.Name AS 'UNIDAD_FUNCIONAL',
+	CASE UFC.UnitType WHEN 1 THEN 'URGENCIAS' 
+					  WHEN 2 THEN 'HOSPITALIZACION' 
+					  WHEN 3 THEN 'APOYO DX' 
+					  WHEN 4 THEN 'APOYO TERAPEUTICO' 
+					  WHEN 5 THEN 'UC INTENSIVOS ADULTOS' 
+					  WHEN 6 THEN 'UC INTERMEDIOS ADULTOS'
+					  WHEN 7 THEN 'UC INTENSIVOS PEDIATRICA' 
+					  WHEN 8 THEN 'UC INTERMEDIOS PEDIATRICA' 
+					  WHEN 9 THEN 'UC INTENSIVOS NEONATAL'
+					  WHEN 10 THEN 'UC INTERMEDIOS NEONATAL' 
+					  WHEN 11 THEN 'UC BASICO NEONATAL' 
+					  WHEN 12 THEN 'UNIDAD RENAL' 
+					  WHEN 13 THEN 'UNIDAD ONCOLOGICA' 
+					  WHEN 14 THEN 'UNIDAD MEDICINA NUCLEAR' 
+					  WHEN 15 THEN 'CONSULTA EXTERNA' 
+					  WHEN 16 THEN 'UNIDAD MENTAL' 
+					  WHEN 17 THEN 'UNIDAD DE QUEMADOS'
+					  WHEN 18 THEN 'UNIDAD CUIDADO PALIATIVO' 
+					  WHEN 19 THEN 'CIRUGIA' 
+					  WHEN 20 THEN 'LABORATORIO' 
+					  WHEN 21 THEN 'CARDIOLOGIA NO INVASIVA' 
+					  WHEN 22 THEN 'CARDIOLOGIA INVASIVA' 
+					  WHEN 23 THEN 'GINECO-OBSTETRICIA'
+					  WHEN 24 THEN 'CE GINECO-OBSTETRICIA' 
+					  WHEN 25 THEN 'OTRAS' 
+					  END [TIPO_UNIDADFUNCIONAL],
+	CAST(FAT.DocumentDate AS DATE) as 'FECHA BUSQUEDA',
+	CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+
+FROM FixedAsset.FixedAssetTransfer AS FAT 
+INNER JOIN FixedAsset.FixedAssetTransferDetail AS FAD ON FAD.FixedAssetTransferId = FAT.Id
+LEFT JOIN FixedAsset.FixedAssetItem AS P ON P.Id=FAT.Id
+INNER JOIN FixedAsset.FixedAssetLocation AS UI ON UI.Id = FAT.SourceLocationId
+INNER JOIN FixedAsset.FixedAssetLocation AS UF ON UF.Id = FAT.TargetLocationId
+inner join FixedAsset.FixedAssetResponsible AS RES ON FAT.SourceResponsibleId=RES.Id
+INNER JOIN FixedAsset.FixedAssetResponsible AS REF ON  FAT.TargetResponsibleId=REF.Id
+INNER JOIN Common.ThirdParty AS TP ON RES.Code=TP.Nit
+INNER JOIN Common.ThirdParty AS TPF ON REF.Code=TPF.Nit
+INNER JOIN Payroll.FunctionalUnit AS UFC ON UI.FunctionalUnitId=UFC.Id
+--WHERE FAT.SourceResponsibleId='1634'

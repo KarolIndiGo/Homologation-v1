@@ -1,0 +1,34 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_REGISTROSTRABAJOSOCIAL
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_REGISTROSTRABAJOSOCIAL]
+AS
+
+SELECT        RTRIM(INPACIENT.IPPRINOMB) + ' ' + RTRIM(INPACIENT.IPSEGNOMB) + ' ' + RTRIM(INPACIENT.IPPRIAPEL) + ' ' + RTRIM(INPACIENT.IPSEGAPEL) 
+                         AS 'NombrePaciente', HCHISPACA.IPCODPACI AS 'Identificacion', HCHISPACA.NUMINGRES AS 'Ingreso', HCHISPACA.CODPROSAL AS 'CodProfesional', 
+                         HCHISPACA.FECHISPAC AS 'FechaHistoria', HCHISPACA.CODDIAGNO AS 'CodDiag', HCHISPACA.DATOBJETI AS 'Nota', 
+                         CASE WHEN INPACIENT.IPSEXOPAC = '1' THEN 'Masculino' WHEN INPACIENT.IPSEXOPAC = '2' THEN 'Femenino' END AS 'sexo', 
+                          (datediff (year, INPACIENT.IPFECNACI, getdate ())) EDAD, CASE WHEN DATEDIFF(year, 
+                         INPACIENT.IPFECNACI, GETDATE()) - 1 < '1' THEN 'MENOR  1 AÑO' WHEN DATEDIFF(year, INPACIENT.IPFECNACI, GETDATE()) - 1 >= '1' AND DATEDIFF(year, 
+                         INPACIENT.IPFECNACI, GETDATE()) - 1 <= '4' THEN '1 A 4 AÑOS' WHEN DATEDIFF(year, INPACIENT.IPFECNACI, GETDATE()) - 1 >= '5' AND DATEDIFF(year, 
+                         INPACIENT.IPFECNACI, GETDATE()) - 1 <= '14' THEN '5 A 14 AÑOS' WHEN DATEDIFF(year, INPACIENT.IPFECNACI, GETDATE()) - 1 >= '15' AND DATEDIFF(year, 
+                         INPACIENT.IPFECNACI, GETDATE()) - 1 <= '44' THEN '15 A 44 AÑOS' WHEN DATEDIFF(year, INPACIENT.IPFECNACI, GETDATE()) - 1 >= '45' AND DATEDIFF(year, 
+                         INPACIENT.IPFECNACI, GETDATE()) - 1 <= '59' THEN '45 A 59 AÑOS' WHEN DATEDIFF(year, INPACIENT.IPFECNACI, GETDATE()) 
+                         - 1 >= '60' THEN 'MAYOR A 60 AÑOS' END AS 'GrupoEtaro', INUNIFUNC.UFUDESCRI AS 'Unidad', HCHISPACA.NUMEFOLIO
+FROM           HCHISPACA INNER JOIN
+                        INPACIENT ON HCHISPACA.IPCODPACI = INPACIENT.IPCODPACI INNER JOIN
+                        INUNIFUNC ON HCHISPACA.UFUCODIGO = INUNIFUNC.UFUCODIGO 
+WHERE        (HCHISPACA.CODPROSAL IN ('TS03','TS06', '229','974', '976', 'TS11', 'TS12','661'))
+
+
+

@@ -1,0 +1,110 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: ViewOpportunityBloodComponents
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+/*******************************************************************************************************************
+Nombre: [Report].[ViewOpportunityBloodComponents]
+Tipo:vista
+Observacion:Oportunidad de solicitud y despacho de hemocomponentes
+Profesional: Nilsson Galindo
+Fecha:12-12-2012
+---------------------------------------------------------------------------
+Modificaciones
+_____________________________________________________________________________
+Version 2
+Persona que modifico:
+Fecha:
+Observaciones:
+-------------------------------------------------------------------------------------------------------------------------------------
+Version 3
+Persona que modifico:
+Fecha:
+Observaciones:
+***********************************************************************************************************************************/
+
+CREATE VIEW [Report].[ViewOpportunityBloodComponents] AS
+
+SELECT
+CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,
+TIP.NOMBRE AS [TIPO IDENTIFICACIÓN],
+HMCO.IPCODPACI AS [IDENTIFICACIÓN],
+PAC.IPNOMCOMP AS [NOMBRE],
+CASE PAC.IPSEXOPAC WHEN 1 THEN 'MASCULINO' ELSE 'FEMENINO' END AS[GENERO DEL PACIENTE],
+CAST(PAC.IPFECNACI AS DATE) AS [FECHA DE NACIMIENTO],
+CASE ING.CODTIPPAC WHEN '1' THEN 'Maternas' 
+				   WHEN '2' THEN 'Pediatrico'
+				   WHEN '3' THEN 'Población general' 
+				   WHEN '4' THEN 'Adulto mayor' 
+				   WHEN '5' THEN 'Población general' END AS [TIPO DE PACIENTE], 
+DATEDIFF(YEAR,IPFECNACI ,GETDATE()) -(CASE WHEN DATEADD(YY,DATEDIFF(YEAR,IPFECNACI,GETDATE()),IPFECNACI)>GETDATE() THEN 1 ELSE 0 END) AS EDAD,
+HEA.Code AS [CODIGO ENTIDAD],
+HEA.Name AS ENTIDAD,
+CG.Name AS [GRUPO DE ATENCION],
+HMCO.NUMINGRES AS INGRESO,
+HMCO.NUMEFOLIO AS FOLIO,
+HMCO.FECORDMED AS [FECHA SOLICITUD],
+FUN.UFUDESCRI AS [UNIDAD FUNCIONAL SOLICITUD],
+HSAN.DESCOMSAM AS HEMOCOMPONENTE,
+HBOL.VolumeTransfuse AS [VOLUMEN A TRANSFUNDIR],
+CASE HBOL.ESTADO WHEN 0 THEN 'RECHAZADO'
+				 WHEN 1 THEN 'Solicitud Reserva'
+				 WHEN 2 THEN 'Solicitud de Transfusión'
+				 WHEN 3 THEN 'Reserva sin Solicitud de Transfusión'
+				 WHEN 4 THEN 'Reserva con Solicitud de Transfusión'
+				 WHEN 5 THEN 'Liberado'
+				 WHEN 6 THEN 'Registro no realizado'
+				 WHEN 7 THEN 'Aplicado - registro realizado'
+				 WHEN 8 THEN 'No Aplicado - registro descartado'
+				 WHEN 9 THEN 'Anulado'
+				 WHEN 10 THEN 'Descartado por salida de paciente'
+				 WHEN 11 THEN 'Extramural' ELSE CAST(HBOL.ESTADO AS VARCHAR) END AS [ESTADO],
+HBOL.FECSOLRES AS [FECHA SOLICITU RESERVA],
+HBOL.FECSOLTRA AS [FECHA SOLICITUD TRANSFUSIÓN],
+HBOL.FECRESERVA AS [FECHA RESERVA],
+HBOL.FECENTREGA AS [FECHA ENTREGA BOLSA],
+HBOL.FECRECBOLSA AS [FECHA RECIBE BOLSA],
+HBOL.NUMBOLSA AS [NUMERO BOLSA],
+HBOL.FECHINITRA AS [FECHA INICIO TRANSFUSIÓN],
+HBOL.FECHFINTRA AS [FECHA FINAL TRANSFUSIÓN],
+DATEDIFF(MINUTE,HBOL.FECHINITRA,HBOL.FECHFINTRA) AS [DURACION TRANSFUSIÓN MIN],
+HBOL.VOLTRANSF AS [VOLUMEN TRANSFUNDIDO],
+REC.DESCRIPCION AS [MOTIVO RECHAZO],
+PRO.CODPROSAL+'-'+PRO.NOMMEDICO AS [ENFERMERA RECHAZO],
+1 as 'CANTIDAD',
+CAST(HMCO.FECORDMED AS date) AS [FECHA BUSQUEDA],
+YEAR(HMCO.FECORDMED) AS [AÑO FECHA BUSQUEDA],
+MONTH(HMCO.FECORDMED) AS [MES FECHA BUSQUEDA],
+CASE MONTH(HMCO.FECORDMED) WHEN 1 THEN 'ENERO'
+						  WHEN 2 THEN 'FEBRERO'
+						  WHEN 3 THEN 'MARZO'
+						  WHEN 4 THEN 'ABRIL'
+						  WHEN 5 THEN 'MAYO'
+						  WHEN 6 THEN 'JUNIO'
+						  WHEN 7 THEN 'JULIO'
+						  WHEN 8 THEN 'AGOSTO'
+						  WHEN 9 THEN 'SEPTIEMBRE'
+						  WHEN 10 THEN 'OCTUBRE'
+						  WHEN 11 THEN 'NOVIEMBRE'
+						  WHEN 12 THEN 'DICIEMBRE' END AS [MES NOMBRE FECHA BUSQUEDA],
+CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+FROM 
+dbo.HCORHEMCO HMCO
+INNER JOIN dbo.HCORHEMBOL HBOL ON HMCO.ID=HBOL.HCORHEMCOID
+INNER JOIN dbo.INPACIENT PAC ON HMCO.IPCODPACI=PAC.IPCODPACI
+INNER JOIN dbo.ADTIPOIDENTIFICA TIP ON PAC.IPTIPODOC=TIP.CODIGO
+INNER JOIN dbo.ADINGRESO ING ON HMCO.NUMINGRES=ING.NUMINGRES
+INNER JOIN CONTRACT.HEALTHADMINISTRATOR HEA ON ING.GENCONENTITY=HEA.Id
+INNER JOIN Contract.CareGroup CG ON ING.GENCAREGROUP=CG.Id 
+INNER JOIN dbo.HCCOMSAN HSAN ON HBOL.COMSAMID=HSAN.ID
+INNER JOIN dbo.INUNIFUNC FUN ON HBOL.UFUSOLRES=FUN.UFUCODIGO
+LEFT JOIN dbo.HCRECHEMO REC ON HBOL.HCRECHEMOID=REC.ID
+LEFT JOIN dbo.INPROFSAL PRO ON HBOL.ENFRECHAZ=PRO.CODPROSAL
+--WHERE HMCO.IPCODPACI='23114610729214' AND NUMEFOLIO='225'
+
+
+--SELECT * FROM dbo.HCORHEMCO WHERE IPCODPACI='23114610729214' AND NUMEFOLIO='225'
+--SELECT * FROM dbo.HCORHEMBOL WHERE HCORHEMCOID =25523
+--

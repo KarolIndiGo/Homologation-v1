@@ -1,0 +1,195 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: UploadCubeVieFinanceRadicateInvoice
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+/*******************************************************************************************************************
+Nombre: [Report].[UploadCubeVieFinanceRadicateInvoice]
+Tipo:Procedimiento Vista
+Observacion:Cubo consolidado del proceso de facturación.
+Profesional:Andres Cabrera
+Fecha Creación:03-03-2024
+Profesional revisión:
+Fecha Revisión:
+---------------------------------------------------------------------------
+Modificaciones
+_____________________________________________________________________________
+Version 2
+Persona que modifico:Nilsson Miguel Galindo Lopez
+Fecha:21-05-2024
+Observaciones:Se ajustan los campos de unidad operativa, tambien las fechas de año y mes.
+--------------------------------------
+Version 3
+Persona que modifico: 
+Fecha:
+Observaciones:
+***********************************************************************************************************************************/
+
+
+CREATE view [Report].[UploadCubeVieFinanceRadicateInvoice] AS
+
+WITH CTE_CARTERA
+AS
+(
+SELECT 
+DISTINCT 
+CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY,
+OU.UnitName AS [UNIDAD OPERATIVA],
+CI.NAME AS [CIUDAD OPERATIVA],
+--RTRIM(isnull(C.NOMCENATE,'SOCIEDAD DE CIRUGIA DE BOGOTA HOSPITAL DE SAN JOSE')) AS [CENTRO DE ATENCION],
+CASE AR.PortfolioStatus WHEN 1 THEN 'SIN RADICAR'
+						WHEN 2 THEN 'RADICADA SIN CONFIRMAR' ELSE 'RADICADA ENTIDAD' END AS [ESTADO CARTERA],
+TP.Nit AS NIT,
+TP.Name AS [TERCERO],
+CON.contractnumber AS [CONTRATO],	
+ISNULL(cg.Name,'SALDO INICIAL') AS [GRUPO DE ATENCION],
+CASE CG.EntityType WHEN 1 THEN 'EPS Contributivo' 
+				   WHEN 2 THEN 'EPS Subsidiado'
+				   WHEN 3 THEN 'ET Vinculados Municipios' 
+				   WHEN 4 THEN 'ET Vinculados Departamentos' 
+				   WHEN 5 THEN 'ARL Riesgos Laborales' 
+				   WHEN 6 THEN 'MP Medicina Prepagada'
+				   WHEN 7 THEN 'IPS Privada' 
+				   WHEN 8 THEN 'IPS Publica' 
+				   WHEN 9 THEN 'Regimen Especial' 
+				   WHEN 10 THEN 'Accidentes de transito' 
+				   WHEN 11 THEN 'Fosyga' 
+				   WHEN 12 THEN 'Otros'
+				   WHEN 13 THEN 'Aseguradoras' 
+				   WHEN 99 THEN 'Particulares' ELSE 'Otros' END AS [REGIMEN],
+CASE AR.AccountReceivableType WHEN 1 THEN 'FACTURACION BASICA' 
+							  WHEN 2 THEN 'FACTURACION SALUD' 
+							  WHEN 3 THEN 'IMPUESTO INDUSTRIA Y COMERCIO'
+							  WHEN 4 THEN 'PAGARES' 
+							  WHEN 5 THEN 'ACUERDO DE PAGOS' 
+							  WHEN 6 THEN 'DOCUMENTOS DE PAGO A CUOTA MODERADORA' 
+							  WHEN 7 THEN 'FACTURA PRODUCTOS'
+							  WHEN 8 THEN 'IMPUESTO PREDIAL' END AS [TIPO DOCUMENTO],
+AR.InvoiceNumber AS [NRO FACTURA],
+CAST(AR.Value AS NUMERIC) AS [VALOR FACTURA],
+CAST(AR.Balance AS NUMERIC) AS [SALDO FACTURA],
+CAST(ar.AccountReceivableDate AS DATE) AS [FECHA FACTURA], 
+AR.ThirdPartyId,
+CASE AR.Status	WHEN 3 THEN 'ANULADO' ELSE 'FACTURADO' END AS [ESTADO FACTURA],
+CASE AR.OpeningBalance 	when 1 then 'SI' ELSE 'NO' END AS [SALDO INICIAL] ,		
+I.InvoicedUser +' - '+ SU.NOMUSUARI AS [USUARIO FACTURO],
+CAT.Name AS [CATEGORIA],
+CAST(i.initialdate AS DATE) AS [FECHA INGRESO],	
+CAST(i.outputdate AS DATE) AS [FECHA EGRESO CORTE],
+I.DocumentType,
+AR.CustomerId,
+I.AdmissionNumber AS INGRESO
+FROM 
+Portfolio.AccountReceivable AR WITH (NOLOCK)
+INNER JOIN Common.ThirdParty TP WITH (NOLOCK) ON AR.ThirdPartyId=TP.Id 
+LEFT JOIN Contract.CareGroup CG WITH (NOLOCK) ON AR.CareGroupId =CG.Id
+LEFT JOIN contract.contract CON WITH (NOLOCK) ON CG.contractid = CON.id
+LEFT JOIN Billing.Invoice I WITH (NOLOCK) ON AR.InvoiceId = I.Id
+LEFT JOIN DBO.SEGusuaru SU WITH (NOLOCK) ON I.InvoicedUser=SU.CODUSUARI
+LEFT JOIN dbo.ADINGRESO A WITH(NOLOCK) ON I.AdmissionNumber = A.NUMINGRES
+LEFT JOIN dbo.ADCENATEN C WITH(NOLOCK) ON A.CODCENATE = C.CODCENATE   
+LEFT JOIN Billing.InvoiceCategories CAT WITH(NOLOCK) ON I.InvoiceCategoryId=CAT.id
+LEFT JOIN Common.OperatingUnit OU WITH(NOLOCK) ON OU.ID=AR.OperatingUnitId
+LEFT JOIN Common.City CI WITH(NOLOCK) ON OU.IdCity=CI.Id
+WHERE AR.Status <>3 AND I.DocumentType<>5
+),
+
+CTE_RADICACION
+AS
+(
+SELECT 
+RID.InvoiceNumber, 
+MIN(RI.Id) AS Id, 
+MIN(RID.RadicatedNumber) AS RadicatedNumber
+FROM Portfolio.RadicateInvoiceC RI WITH (NOLOCK)
+INNER JOIN Portfolio.RadicateInvoiceD RID WITH (NOLOCK) ON RI.Id = RID.RadicateInvoiceCId
+INNER JOIN CTE_CARTERA AS FAC ON RID.InvoiceNumber=FAC.[NRO FACTURA]
+WHERE RID.State <>'4'
+GROUP BY RID.InvoiceNumber
+),
+
+CTE_DEVOLUCION
+AS
+(
+SELECT 
+DEV.InvoiceNumber,
+DEV.BalanceInvoice AS [VALOR DEVOLUCION],
+CASE CAB.State WHEN  1 THEN 'DEVOLUCION SIN CONFIRMAR'
+			   WHEN 2 THEN 'DEVOLUCION CONFIRMADO RADICADO' 
+			   WHEN 3 THEN 'DEVOLUCION OFICIO CON RESPUESTA ENVIADA' 
+			   WHEN 4 THEN 'ANULADO' END AS [ESTADO DEVOLUCION],
+TER.ID tercero
+FROM 
+Glosas.GlosaDevolutionsReceptionD DEV WITH (NOLOCK)
+INNER JOIN (SELECT max(DEV.GlosaDevolutionsReceptionCId) IdCabeceraDev,DEV.InvoiceNumber 
+			FROM Glosas .GlosaDevolutionsReceptionD DEV WITH (NOLOCK)
+			GROUP BY DEV.InvoiceNumber) AS G ON DEV.GlosaDevolutionsReceptionCId=G.IdCabeceraDev AND DEV.InvoiceNumber=G.InvoiceNumber 
+INNER JOIN Glosas.GlosaDevolutionsReceptionC AS CAB WITH (NOLOCK) ON DEV.GlosaDevolutionsReceptionCId=CAB.Id
+INNER JOIN Common.Customer as CLI WITH (NOLOCK) ON CAB.CustomerId=CLI.Id
+INNER JOIN Common.ThirdParty AS TER WITH (NOLOCK) ON CLI.ThirdPartyId=TER.Id
+WHERE CAB.State<>'4'
+),
+
+CTE_RadicateInvoice AS
+(
+SELECT 
+CAR.ID_COMPANY,
+CAR.[UNIDAD OPERATIVA],
+CAR.[CIUDAD OPERATIVA],
+CAR.[SALDO INICIAL],
+CAR.[TIPO DOCUMENTO],
+IIF((CAR.DocumentType=3 OR CAR.DocumentType=6) OR (RI.RadicatedConsecutive IS NULL AND CAR.[SALDO FACTURA]=0 ),'RADICADA ENTIDAD',CAR.[ESTADO CARTERA]) AS [ESTADO CARTERA],
+iif(dev.InvoiceNumber is null,'No','Si') AS [DEVOLUCION],
+CAR.[NIT],
+CAR.[TERCERO],
+ISNULL(cli.name,'PARTICULAR') AS ENTIDAD,
+CLI.EPSCode AS [CODIGO EPS],
+CAR.[CONTRATO],
+CAR.[GRUPO DE ATENCION],
+CAR.[REGIMEN],
+CAR.[NRO FACTURA],
+CAR.[VALOR FACTURA],
+CAR.[SALDO FACTURA],
+CAR.[FECHA FACTURA],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],RI.CreationDate) AS [FECHA CREACION RADICADO],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],RI.DocumentDate) AS [FECHA DOCUMENTO RADICADO],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],RI.RadicatedDate) AS [FECHA RADICACION],
+IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],IIF(CAR.[SALDO FACTURA]=0 AND CAR.[ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate)) AS [FECHA CONFIRMACION RADICADO],
+RI.RadicatedConsecutive AS [CONSECUTIVO RADICACION],
+CAR.[INGRESO],
+CAR.[ESTADO FACTURA],
+CAR.[USUARIO FACTURO],
+TRIM(RI.creationuser) + ' - ' + SUR.NOMUSUARI AS [USUARIO RADICO],
+CAR.[CATEGORIA],
+CAR.[FECHA INGRESO],
+CAR.[FECHA EGRESO CORTE],
+ri.Comment AS [COMENTARIO RADICACION],
+CAR.DocumentType,
+1 AS CANTIDAD
+--YEAR(IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate))) AS [AÑO CONFIRMACION RAD],
+--MONTH(IIF(CAR.DocumentType=3 OR CAR.DocumentType=6,CAR.[FECHA FACTURA],IIF(CAR.[SALDO FACTURA]=0 AND [ESTADO CARTERA] IN ('SIN RADICAR','RADICADA SIN CONFIRMAR'),ISNULL(ri.ConfirmDate,ISNULL(ri.RadicatedDate,CAR.[FECHA FACTURA])),ri.ConfirmDate))) AS [MES CONFIRMACION RAD]
+FROM 
+CTE_CARTERA CAR
+LEFT JOIN CTE_RADICACION RIC ON CAR.[NRO FACTURA]=RIC.InvoiceNumber
+LEFT JOIN Portfolio.RadicateInvoiceC RI WITH (NOLOCK) ON RI.Id=RIC.Id
+LEFT JOIN DBO.SEGusuaru SUR WITH (NOLOCK) ON RI.creationuser=SUR.CODUSUARI
+LEFT JOIN CTE_DEVOLUCION DEV ON CAR.[NRO FACTURA]=DEV.InvoiceNumber AND CAR.ThirdPartyId=DEV.tercero 
+LEFT JOIN COMMON.Customer CLI WITH (NOLOCK)ON CAR.CustomerId=CLI.ID
+)
+SELECT *,
+CASE [ESTADO CARTERA] WHEN 'RADICADA ENTIDAD' THEN ISNULL(CAST([FECHA CONFIRMACION RADICADO] AS DATE),[FECHA FACTURA])
+					  WHEN 'RADICADA SIN CONFIRMAR' THEN CAST([FECHA RADICACION] AS DATE)
+					  WHEN 'SIN RADICAR' THEN [FECHA FACTURA] ELSE [FECHA FACTURA] END [FECHA BUSQUEDA],
+CASE [ESTADO CARTERA] WHEN 'RADICADA ENTIDAD' THEN ISNULL(YEAR([FECHA CONFIRMACION RADICADO]),YEAR([FECHA RADICACION]))
+					  WHEN 'RADICADA SIN CONFIRMAR' THEN YEAR([FECHA RADICACION])
+					  WHEN 'SIN RADICAR' THEN YEAR([FECHA FACTURA]) ELSE YEAR([FECHA FACTURA]) END [AÑO BUSQUEDA],
+CASE [ESTADO CARTERA] WHEN 'RADICADA ENTIDAD' THEN ISNULL(MONTH([FECHA CONFIRMACION RADICADO]),MONTH([FECHA FACTURA]))
+					  WHEN 'RADICADA SIN CONFIRMAR' THEN MONTH([FECHA RADICACION])
+					  WHEN 'SIN RADICAR' THEN MONTH([FECHA FACTURA]) ELSE MONTH([FECHA FACTURA]) END [MES BUSQUEDA],
+CASE [ESTADO CARTERA] WHEN 'RADICADA ENTIDAD' THEN ISNULL(DAY([FECHA CONFIRMACION RADICADO]),DAY([FECHA FACTURA]))
+					  WHEN 'RADICADA SIN CONFIRMAR' THEN DAY([FECHA RADICACION])
+					  WHEN 'SIN RADICAR' THEN DAY([FECHA FACTURA]) ELSE DAY([FECHA FACTURA]) END [DIA BUSQUEDA],
+CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+FROM CTE_RadicateInvoice

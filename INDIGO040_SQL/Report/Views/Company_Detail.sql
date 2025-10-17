@@ -1,0 +1,28 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: Company_Detail
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+
+CREATE VIEW [Report].[Company_Detail]
+AS
+SELECT 
+'INDIGO040' AS ID_COMPANY,
+'SOCIEDAD DE CIRUGÍA DE BOGOTÁ HOSPITAL DE SAN JOSÉ' AS NAME_COMPANY,
+'hsjpbi@indigo.tech' AS MAIL_PBI,
+'INDIGO' AS MAIN_NAME,
+ 18 as TENAN_ID,
+CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+UNION ALL
+SELECT 
+'STAGINGHSJ' AS ID_COMPANY,
+'SOCIEDAD DE CIRUGÍA DE BOGOTÁ HOSPITAL DE SAN JOSÉ' AS NAME_COMPANY,
+'hsjpbi@indigo.tech' AS MAIL_PBI,
+'INDIGO' AS MAIN_NAME,
+ 18 as TENAN_ID,
+CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL

@@ -1,0 +1,59 @@
+-- Workspace: SQLServer
+-- Item: INDIGO036 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: IND_SP_V2_ERP_COTIZACIONES
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE procedure [Report].[IND_SP_V2_ERP_COTIZACIONES]
+as
+SELECT Q.Code [DOCUMENTO COTIZACION], DocumentDate [FECHA COTIZACION],case Q. QuotationType when 1 then 'INTRAHOSPITLARIO' WHEN 2 THEN 'AMBULATORIO' END [TIPO COTIZACION], 
+CASE Q.Status WHEN 1 THEN 'REGISTRADO' WHEN 2 THEN 'CONFIRMADO' ELSE 'OTRO' END [ESTADO],AdmissionNumber [INGRESO], 
+TP.Nit [IDENTIFICACION],TP.Name [PACIENTE], Q.Description [DESCRIPCION],'SERVICIOS' [TIPO], HA.Name [ENTIDAD],CG.Code [CODIGO GRUPO ATENCION], CG.Name [GRUPO DE ATENCION],
+TP2.Nit [NIT],TP2.Name [TERCERO],CUPS.Code [CUPS],CUPS.Description [DESCRIPCION CUPS], SERVICIOSIPS.Code [CODIGO SERVICIO/PRODUCTO],SERVICIOSIPS.Name [SERVICIO/PRODUCTO],
+QX.Code [CODIGO HIJO], QX.Name [SERVICIO HIJO],
+QSOD.InvoicedQuantity [CANTIDAD], iif (QSODS.Id is null,QSOD.RateManualSalePrice,QSODS.TotalSalesPrice) [VALOR TARIFA],
+
+QSOD.ServiceDate [FECHA SERVICIO], QSOD.AuthorizationNumber [NRO AUTORIZACION], 
+FU.Code + ' - ' + FU.Name [UNIDAD FUNCIONAL SERVICIO], RTRIM(MED.CODPROSAL) + ' - ' + MED.NOMMEDICO [PROFESIONAL],
+iif (QSODS.Id is null,qsod.SubTotalSalesPrice,QSODS.TotalSalesPrice) [PRECIO UNITARIO SERVICIO],  
+iif (QSODS.Id is null,QSOD.GrandTotalSalesPrice,QSODS.TotalSalesPrice) [PRECIO TOTAL SERVICIO],QSOD.GrandTotalSalesPrice [VALOR TOTAL ORDEN],
+'' [ALMACEN]
+FROM     Billing.Quotation Q WITH (NOLOCK)
+join Billing.QuotationServiceOrderDetail QSOD WITH (NOLOCK) ON QSOD .QuotationId =Q.Id 
+JOIN Common.OperatingUnit OU  WITH (NOLOCK) ON Q.OperatingUnitId =OU.Id 
+LEFT JOIN Common.ThirdParty AS TP WITH (NOLOCK) ON TP.Id =Q.ThirdPartyId  
+LEFT JOIN Contract .HealthAdministrator AS HA WITH (NOLOCK) ON HA.Id =QSOD.HealthAdministratorId 
+LEFT JOIN Contract .CareGroup CG WITH (NOLOCK) ON QSOD.CareGroupId =CG.Id 
+LEFT JOIN Common.ThirdParty AS TP2 WITH (NOLOCK) ON TP2.Id =QSOD.ThirdPartyId 
+LEFT JOIN Contract.CUPSEntity AS CUPS WITH (NOLOCK) ON CUPS.Id = QSOD.CUPSEntityId
+LEFT JOIN Contract.IPSService AS SERVICIOSIPS WITH (NOLOCK) ON SERVICIOSIPS.Id = QSOD.IPSServiceId
+LEFT JOIN Payroll .FunctionalUnit FU WITH (NOLOCK) ON FU.CostCenterId =QSOD.PerformsFunctionalUnitId  
+LEFT JOIN dbo.INPROFSAL AS MED WITH (NOLOCK) ON MED.CODPROSAL = QSOD.PerformsHealthProfessionalCode
+LEFT JOIN Payroll .CostCenter AS CC WITH (NOLOCK) ON CC.Id =QSOD.CostCenterId  
+LEFT JOIN Billing .QuotationServiceOrderDetailSurgical AS QSODS WITH (NOLOCK) ON QSODS.QuotationServiceOrderDetailId =QSOD.Id 
+LEFT JOIN Contract.IPSService AS QX WITH (NOLOCK) ON QX.Id = QSODS.IPSServiceId AND QSODS.QuotationServiceOrderDetailId =QSOD.Id
+--WHERE Q.Code ='00000285' AND QSOD.ISDELETE = '0'
+union 
+SELECT Q.Code [DOCUMENTO COTIZACION], DocumentDate [FECHA COTIZACION], case Q. QuotationType when 1 then 'INTRAHOSPITLARIO' WHEN 2 THEN 'AMBULATORIO' END [TIPO COTIZACION], 
+CASE Q.Status WHEN 1 THEN 'REGISTRADO' WHEN 2 THEN 'CONFIRMADO' ELSE 'OTRO' END [ESTADO],AdmissionNumber [INGRESO], 
+TPP.Nit [IDENTIFICACION],TPP.Name [PACIENTE], Q.Description [DESCRIPCION],'PRODUCTOS' [TIPO],HAP.Name [ENTIDAD],CGP.Code [CODIGO GRUPO ATENCION], CGP.Name [GRUPO DE ATENCION],
+TPP.Nit [NIT],TPP.Name [TERCERO],'' [CUPS],'' [DESCRIPCION CUPS],PRO.Code [CODIGO SERVICIO/PRODUCTO],PRO.Name [SERVICIO/PRODUCTO],
+'' [CODIGO HIJO], '' [SERVICIO HIJO],
+Quantity [CANTIDAD],SalePrice [VALOR TARIFA],
+QPDD.ServiceDate [FECHA SERVICIO],QPDD.AuthorizationNumber [NRO AUTORIZACION],FUP.Code + ' - ' + FUP.Name [UNIDAD FUNCIONAL SERVICIO],RTRIM(MEDP.CODPROSAL) + ' - ' + MEDP.NOMMEDICO [PROFESIONAL],
+QPDD.TotalSalesPrice [PRECIO UNITARIO SERVICIO], QPDD.GrandTotalSalesPrice [PRECIO TOTAL SERVICIO],QPDD.GrandTotalSalesPrice [VALOR TOTAL ORDEN], WH.Code + ' - ' + WH.Name [ALMACEN]
+FROM     Billing.Quotation Q WITH (NOLOCK)
+JOIN Billing.QuotationPharmaceuticalDispensingDetail QPDD WITH (NOLOCK) ON Q.Id =QPDD.QuotationId 
+LEFT JOIN Contract .HealthAdministrator AS HAP WITH (NOLOCK) ON HAP.Id =QPDD.HealthAdministratorId 
+LEFT JOIN Contract .CareGroup CGP WITH (NOLOCK) ON QPDD.CareGroupId =CGP.Id 
+LEFT JOIN Common.ThirdParty AS TPP WITH (NOLOCK) ON TPP.Id =Q.ThirdPartyId
+LEFT JOIN Inventory .InventoryProduct PRO (NOLOCK) ON PRO.Id =QPDD.ProductId
+LEFT JOIN Inventory .Warehouse WH (NOLOCK) ON WH.Id =QPDD .WarehouseId 
+LEFT JOIN Payroll .FunctionalUnit FUP WITH (NOLOCK) ON FUP.CostCenterId =QPDD.FunctionalUnitId 
+LEFT JOIN dbo.INPROFSAL AS MEDP WITH (NOLOCK) ON MEDP.CODPROSAL = QPDD.OrderedHealthProfessionalCode
+
+--WHERE Q.Code ='00000285' --AND QSOD.ISDELETE = '0'

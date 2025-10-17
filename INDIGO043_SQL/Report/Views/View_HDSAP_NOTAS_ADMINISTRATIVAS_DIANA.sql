@@ -1,0 +1,24 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_NOTAS_ADMINISTRATIVAS_DIANA
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_NOTAS_ADMINISTRATIVAS_DIANA]
+AS
+
+select c.IPCODPACI DocumentoPaciente,
+       pac.IPNOMCOMP NombrePaciente,
+       FECHACREACION,
+	   VALOR Detalle
+from NTNOTASADMINISTRATIVASC c 
+    join INPACIENT pac on pac.IPCODPACI = c.IPCODPACI
+    LEFT JOIN NTNOTASADMINISTRATIVASD d ON d.IDNTNOTASADMINISTRATIVASC = c.id
+    LEFT JOIN NTVARIABLESL ntl ON ntl.IDNTVARIABLE = d.IDNTVARIABLE
+	where CODUSUARI = 'auxe411'
+  
+

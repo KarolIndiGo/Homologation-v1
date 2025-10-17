@@ -1,0 +1,413 @@
+-- Workspace: SQLServer
+-- Item: INDIGO026 [SQL]
+-- ItemId: SPN
+-- Schema: ViewInternal
+-- Object: Inventory_Inferido_Producto_Almacen0065
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+CREATE VIEW [ViewInternal].[Inventory_Inferido_Producto_Almacen0065] AS
+	 
+SELECT  Sucursal, 
+            Cod_Producto, 
+            Producto, 
+            --ATC, 
+            --CodAlterno, 
+            --CodSubgrupo, 
+            CodMedicamento, 
+			Cod_Insumo,
+			Insumo,
+			[Código Agrupador], 
+			 [Agrupador],
+            --CodigoCUM, 
+            --TipoProducto, 
+            --Homólgo, 
+            --NombreHomólogo, 
+           
+            
+			SUM(Ene24) AS Ene24, 
+            SUM(Feb24) AS Feb24, 
+            SUM(Mar24) AS Mar24, 
+            SUM(Abr24) AS Abr24, 
+            SUM(May24) AS May24, 
+            SUM(Jun24) AS Jun24, 
+            SUM(Jul24) AS Jul24, 
+            SUM(Ago24) AS Ago24, 
+            SUM(Sep24) AS Sep24, 
+            SUM(Oct24) AS Oct24, 
+            SUM(Nov24) AS Nov24, 
+            SUM(Dic24) AS Dic24, 
+			SUM(Ene25) AS Ene25,
+			SUM(Feb25) AS Feb25, 
+            SUM(Mar25) AS Mar25, 
+            SUM(Abr25) AS Abr25, 
+            SUM(May25) AS May25, 
+            SUM(Jun25) AS Jun25, 
+            SUM(Jul25) AS Jul25, 
+            SUM(Ago25) AS Ago25, 
+            SUM(Sep25) AS Sep25, 
+            SUM(Oct25) AS Oct25, 
+            SUM(Nov25) AS Nov25, 
+            SUM(Dic25) AS Dic25, VEN
+     FROM
+     (
+            
+         --, 
+         --            d.code
+         SELECT UO.UnitName AS Sucursal,
+               CASE
+               
+                    WHEN(MONTH(D.DocumentDate)) = '1'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Ene24'
+                    WHEN(MONTH(D.DocumentDate)) = '2'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Feb24'
+                    WHEN(MONTH(D.DocumentDate)) = '3'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Mar24'
+                    WHEN(MONTH(D.DocumentDate)) = '4'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Abr24'
+                    WHEN(MONTH(D.DocumentDate)) = '5'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'May24'
+                    WHEN(MONTH(D.DocumentDate)) = '6'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Jun24'
+                    WHEN(MONTH(D.DocumentDate)) = '7'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Jul24'
+                    WHEN(MONTH(D.DocumentDate)) = '8'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Ago24'
+                    WHEN(MONTH(D.DocumentDate)) = '9'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Sep24'
+                    WHEN(MONTH(D.DocumentDate)) = '10'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Oct24'
+                    WHEN(MONTH(D.DocumentDate)) = '11'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Nov24'
+                    WHEN(MONTH(D.DocumentDate)) = '12'
+                        AND (YEAR(D.DocumentDate)) = '2024'
+                    THEN 'Dic24'
+					 WHEN(MONTH(D.DocumentDate)) = '1'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Ene25'
+					WHEN(MONTH(D.DocumentDate)) = '2'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Feb25'
+                    WHEN(MONTH(D.DocumentDate)) = '3'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Mar25'
+                    WHEN(MONTH(D.DocumentDate)) = '4'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Abr25'
+                    WHEN(MONTH(D.DocumentDate)) = '5'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'May25'
+                    WHEN(MONTH(D.DocumentDate)) = '6'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Jun25'
+                    WHEN(MONTH(D.DocumentDate)) = '7'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Jul25'
+                    WHEN(MONTH(D.DocumentDate)) = '8'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Ago25'
+                    WHEN(MONTH(D.DocumentDate)) = '9'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Sep25'
+                    WHEN(MONTH(D.DocumentDate)) = '10'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Oct25'
+                    WHEN(MONTH(D.DocumentDate)) = '11'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Nov25'
+                    WHEN(MONTH(D.DocumentDate)) = '12'
+                        AND (YEAR(D.DocumentDate)) = '2025'
+                    THEN 'Dic25'
+                END AS Mes, 
+                pr.Code AS Cod_Producto, 
+                pr.Name AS Producto, 
+                --pr.CodeAlternative AS [ATC], 
+                --pr.CodeAlternativeTwo AS [CodAlterno], 
+                --sg.Code + ' - ' + sg.Name AS [CodSubgrupo], 
+                catc.Code AS [CodMedicamento], 
+				s.code as Cod_Insumo,
+				s.suppliename as Insumo,
+                --pr.CodeCUM AS [CodigoCUM],
+                --CASE
+                --    WHEN pr.POSProduct = '1'
+                --    THEN 'POS'
+                --    WHEN pr.POSProduct = '0'
+                --    THEN 'No_POS'
+                --END AS TipoProducto, 
+                SUM(DI.Quantity - DI.ReturnedQuantity) AS Cantidad--, 
+                --H.CodeAlternativeTwo AS Homólgo, 
+                --H.name AS NombreHomólogo
+				,  case when catc.code is not null 
+		   then catc.Code else s.code end  AS [Código Agrupador], 
+		   
+		   case when catc.Name  is not null 
+		   then catc.name else s.SupplieName end  AS [Agrupador], rk.name as VEN
+         FROM Inventory.PharmaceuticalDispensing AS D
+              INNER JOIN Inventory.PharmaceuticalDispensingDetail AS DI  --select * from Inventory.PharmaceuticalDispensingDetail
+              INNER JOIN Payroll.FunctionalUnit AS un ON un.Id = DI.FunctionalUnitId
+              INNER JOIN Inventory.InventoryProduct AS pr
+              INNER JOIN Inventory.ProductSubGroup AS sg ON sg.Id = pr.ProductSubGroupId
+                                                                  --AND sg.code <> 'OSTEO001'
+                                                                  --AND sg.code <> 'PROTE001'
+              LEFT OUTER JOIN Inventory.ATC AS catc ON catc.Id = pr.ATCId
+			   left outer join Inventory.InventoryRiskLevel as rk with (nolock) on rk.id=catc.InventoryRiskLevelId
+			  left outer join .Inventory.InventorySupplie as s with (nolock) on s.id=pr.SupplieId
+              LEFT OUTER JOIN [ViewInternal].HomólogosDiferidoInv AS H ON H.CodeAlternativeTwo = pr.CodeAlternativeTwo
+                                                                              AND pr.Code = h.Code ON pr.Id = DI.ProductId
+                                                                                                      --AND pr.Code NOT LIKE('800-%') 
+																									  ON DI.PharmaceuticalDispensingId = D.Id
+                                                                                                                                       --AND DI.WarehoseId <> '1330'
+                                                                                                                                       AND (DI.Quantity - DI.ReturnedQuantity <> '0')
+              INNER JOIN dbo.ADINGRESO AS I
+              INNER JOIN dbo.INPACIENT AS P ON P.IPCODPACI = I.IPCODPACI ON I.NUMINGRES = D.AdmissionNumber
+              INNER JOIN Billing.ServiceOrder AS O ON O.EntityCode = D.Code
+              INNER JOIN Common.OperatingUnit AS UO ON UO.Id = D.OperatingUnitId
+         WHERE(D.DocumentDate >= '01/01/2023 00:00:00')
+              AND (D.STATUS = '2')
+              --AND (D.OperatingUnitId = '1')
+			   AND DI.WarehouseId  in ('73')
+         GROUP BY UO.UnitName, DI.WarehouseId,
+                   (MONTH(D.DocumentDate)), 
+                  pr.Code, 
+                  pr.Name, 
+                  --pr.CodeAlternative, 
+                  --pr.CodeAlternativeTwo, 
+                  --sg.Code, 
+                  catc.Code, 
+				  s.code,
+				  s.suppliename,
+                  --CodeCUM, 
+                  --pr.POSProduct, 
+                  sg.Code + ' - ' + sg.Name, 
+                  YEAR(D.DocumentDate)--, 
+                  --H.name, 
+                  --H.CodeAlternativeTwo
+         --, 
+         --            d.code
+		 ,catc.Name, rk.Name
+         UNION ALL
+                  SELECT UO.UnitName AS Sucursal, 
+                CASE
+                
+                    WHEN(MONTH(DO.DocumentDate)) = '1'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Ene24'
+                    WHEN(MONTH(DO.DocumentDate)) = '2'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Feb24'
+                    WHEN(MONTH(DO.DocumentDate)) = '3'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Mar24'
+                    WHEN(MONTH(DO.DocumentDate)) = '4'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Abr24'
+                    WHEN(MONTH(DO.DocumentDate)) = '5'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'May24'
+                    WHEN(MONTH(DO.DocumentDate)) = '6'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Jun24'
+                    WHEN(MONTH(DO.DocumentDate)) = '7'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Jul24'
+                    WHEN(MONTH(DO.DocumentDate)) = '8'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Ago24'
+                    WHEN(MONTH(DO.DocumentDate)) = '9'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Sep24'
+                    WHEN(MONTH(DO.DocumentDate)) = '10'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Oct24'
+                    WHEN(MONTH(DO.DocumentDate)) = '11'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Nov24'
+                    WHEN(MONTH(DO.DocumentDate)) = '12'
+                        AND (YEAR(DO.DocumentDate)) = '2024'
+                    THEN 'Dic24'
+					 WHEN(MONTH(DO.DocumentDate)) = '1'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Ene25'
+					WHEN(MONTH(DO.DocumentDate)) = '2'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Feb25'
+                    WHEN(MONTH(DO.DocumentDate)) = '3'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Mar25'
+                    WHEN(MONTH(DO.DocumentDate)) = '4'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Abr25'
+                    WHEN(MONTH(DO.DocumentDate)) = '5'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'May25'
+                    WHEN(MONTH(DO.DocumentDate)) = '6'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Jun25'
+                    WHEN(MONTH(DO.DocumentDate)) = '7'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Jul25'
+                    WHEN(MONTH(DO.DocumentDate)) = '8'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Ago25'
+                    WHEN(MONTH(DO.DocumentDate)) = '9'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Sep25'
+                    WHEN(MONTH(DO.DocumentDate)) = '10'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Oct25'
+                    WHEN(MONTH(DO.DocumentDate)) = '11'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Nov25'
+                    WHEN(MONTH(DO.DocumentDate)) = '12'
+                        AND (YEAR(DO.DocumentDate)) = '2025'
+                    THEN 'Dic25'
+                END AS Mes, 
+                pr.Code AS Cod_Producto, 
+                pr.Name AS Producto, 
+                --pr.CodeAlternative AS [ATC], 
+                --pr.CodeAlternativeTwo AS [CodAlterno], 
+                --sg.Code + ' - ' + sg.Name AS [CodSubgrupo], 
+                catc.Code AS [CodMedicamento], 
+				s.code as Cod_Insumo,
+				s.suppliename as Insumo,
+                --pr.CodeCUM AS [CodigoCUM],
+                --CASE
+                --    WHEN pr.POSProduct = '1'
+                --    THEN 'POS'
+                --    WHEN pr.POSProduct = '0'
+                --    THEN 'No_POS'
+                --END AS TipoProducto, 
+                SUM(n.OutstandingQuantity) AS Cantidad--, 
+                --H.CodeAlternativeTwo AS Homólgo, 
+                --H.name AS NombreHomólogo
+				,  case when catc.code is not null 
+		   then catc.Code else s.code end  AS [Código Agrupador], 
+		   
+		   case when catc.Name  is not null 
+		   then catc.name else s.SupplieName end  AS [Agrupador], rk.name as VEN
+         FROM Inventory.TransferOrder AS DO
+              INNER JOIN Inventory.TransferOrderDetail AS DI
+              INNER JOIN Inventory.TransferOrderDetailBatchSerial AS N ON N.TransferOrderDetailId = DI.ID ON DI.TransferOrderId = DO.Id
+              INNER JOIN Inventory.InventoryProduct AS pr
+              INNER JOIN Inventory.ProductSubGroup AS sg ON sg.Id = pr.ProductSubGroupId
+                                                                  --AND sg.code <> 'OSTEO001'
+                                                                  --AND sg.code <> 'PROTE001'
+              LEFT OUTER JOIN [ViewInternal].HomólogosDiferidoInv AS H ON H.CodeAlternativeTwo = pr.CodeAlternativeTwo
+                                                                              AND pr.Code = h.Code
+              LEFT OUTER JOIN Inventory.ATC AS catc ON catc.Id = pr.ATCId ON pr.Id = DI.ProductId
+                                                                                   --AND pr.Code NOT LIKE('800-%')
+																				    left outer join Inventory.InventoryRiskLevel as rk with (nolock) on rk.id=catc.InventoryRiskLevelId
+			 left outer join .Inventory.InventorySupplie as s with (nolock) on s.id=pr.SupplieId 
+              INNER JOIN Inventory.Warehouse AS a ON a.Id = DO.SourceWarehouseId
+              INNER JOIN Common.OperatingUnit AS UO ON UO.Id = DO.OperatingUnitId
+                                                             AND (n.OutstandingQuantity <> '0')
+              LEFT OUTER JOIN [ViewInternal].VIE_AD_Inventory_Almacenes_PB AS infa ON infa.Código = pr.Code
+                                                                                           AND infa.CódigoAlmacén = a.Code  --select * from [ViewInternal].VIE_AD_Inventory_Almacenes_PB
+         WHERE(DO.DocumentDate >= '01/01/2023 00:00:00')
+              AND (DO.STATUS = '2')
+              --AND (DO.OperatingUnitId = '1')
+              AND DO.OrderType = '2'
+			  AND DO.SourceWarehouseId in ('73')
+     --         AND DO.SourceWarehouseId <> '1330'
+         GROUP BY UO.UnitName, a.id,
+                 (MONTH(DO.DocumentDate)), 
+                  pr.Code, 
+                  pr.Name, 
+                  --pr.CodeAlternative, 
+                  --pr.CodeAlternativeTwo, 
+                  --sg.Code, 
+                  catc.Code, 
+				  s.code,
+				  s.suppliename,
+                  --PR.CodeCUM, 
+                  --pr.POSProduct, 
+                  sg.Code + ' - ' + sg.Name, 
+                  YEAR(DO.DocumentDate), 
+                  infa.CostoPromedio, 
+                  infa.Ultimocosto, 
+                  infa.Cantidad, 
+                 -- infa.Unidad--, 
+                  --H.name, 
+                  --H.CodeAlternativeTwo
+				  catc.Name, rk.name
+     ) source PIVOT(SUM(Cantidad) FOR SOURCE.Mes IN(
+													
+                                                    Ene24, 
+                                                    Feb24, 
+                                                    Mar24, 
+                                                    Abr24, 
+                                                    May24, 
+                                                    Jun24, 
+                                                    Jul24, 
+                                                    Ago24, 
+                                                    Sep24, 
+                                                    Oct24, 
+                                                    Nov24, 
+                                                    Dic24,
+													Ene25,
+													Feb25, 
+                                                    Mar25, 
+                                                    Abr25, 
+                                                    May25, 
+                                                    Jun25, 
+                                                    Jul25, 
+                                                    Ago25, 
+                                                    Sep25, 
+                                                    Oct25, 
+                                                    Nov25, 
+                                                    Dic25)) AS pivotable
+     GROUP BY pivotable.Sucursal, 
+              pivotable.Cod_Producto, 
+               pivotable.Producto, 
+              --pivotable.ATC, 
+              --pivotable.CodAlterno, 
+              --pivotable.CodSubgrupo, 
+              pivotable.CodMedicamento,
+			  pivotable.Cod_Insumo,
+			  pivotable.Insumo, 
+			  			pivotable.[Código Agrupador], 
+						pivotable.[Agrupador],
+						pivotable.VEN,
+              --pivotable.CodigoCUM, 
+              --pivotable.TipoProducto, 
+              --pivotable.Homólgo, 
+              --pivotable.NombreHomólogo, 
+              
+           
+			  Ene24, 
+              Feb24, 
+              Mar24, 
+              Abr24, 
+              May24, 
+              Jun24, 
+              Jul24, 
+              Ago24, 
+              Sep24, 
+              Oct24, 
+              Nov24, 
+              Dic24,
+			  Ene25,
+													Feb25, 
+                                                    Mar25, 
+                                                    Abr25, 
+                                                    May25, 
+                                                    Jun25, 
+                                                    Jul25, 
+                                                    Ago25, 
+                                                    Sep25, 
+                                                    Oct25, 
+                                                    Nov25, 
+                                                    Dic25
+
+
+

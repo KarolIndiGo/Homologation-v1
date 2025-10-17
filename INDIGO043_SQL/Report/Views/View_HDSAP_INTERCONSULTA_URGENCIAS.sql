@@ -1,0 +1,40 @@
+-- Workspace: SQLServer
+-- Item: INDIGO043 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: View_HDSAP_INTERCONSULTA_URGENCIAS
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+
+
+CREATE VIEW [Report].[View_HDSAP_INTERCONSULTA_URGENCIAS]
+AS
+
+SELECT        I.IFECHAING AS F_ingreso,
+              I.NUMINGRES AS Ingreso, 
+			  p.IPCODPACI Documento,
+			  p.IPNOMCOMP NombrePaciente,
+			  cd.NUMEFOLIO AS Folio_solicita, 
+			  HP.FECHISPAC AS F_solicitud, 
+			  cd.CODPROSAL AS Med_solicita, 
+              INESPECIA.DESESPECI AS Espec_interconsultada, 
+			  cd.INTERPRET AS Interpretacion, 
+              cd.CODPROINT AS Med_interpreta, 
+			  cd.NUMFOLINT AS Folio_interpreta,
+              HCHISPACA_1.FECHISPAC AS Fecha_interpreta, 
+              HCHISPACA_1.FECHISPAC AS Hora_interpreta, 
+              DATEDIFF(HOUR, HP.FECHISPAC, HCHISPACA_1.FECHISPAC) AS Horas, 
+			  n1.UFUDESCRI AS [Unidad Solicita],
+			  n.UFUDESCRI AS [Unidad Responde]
+
+	FROM     .HCORDINTE AS cd INNER JOIN
+			 .ADINGRESO AS I ON cd.NUMINGRES = I.NUMINGRES INNER JOIN
+			 .INPACIENT AS P on P.IPCODPACI = i.IPCODPACI JOIN
+			 .HCHISPACA AS HP ON cd.NUMEFOLIO = HP.NUMEFOLIO AND cd.NUMINGRES = HP.NUMINGRES INNER JOIN
+			 .INESPECIA ON cd.CODESPECI = INESPECIA.CODESPECI INNER JOIN
+			 .INUNIFUNC n ON n.UFUCODIGO = hp.UFUCODIGO LEFT OUTER JOIN
+			 .INUNIFUNC n1 ON n1.UFUCODIGO = cd.UFUCODIGO LEFT OUTER JOIN
+			 .HCHISPACA AS HCHISPACA_1 ON cd.NUMFOLINT = HCHISPACA_1.NUMEFOLIO AND cd.NUMINGRES = HCHISPACA_1.NUMINGRES
+WHERE        (cd.MANEXTPRO = 0)
+

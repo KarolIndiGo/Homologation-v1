@@ -1,0 +1,21 @@
+-- Workspace: SQLServer
+-- Item: INDIGO040 [SQL]
+-- ItemId: SPN
+-- Schema: Report
+-- Object: DIM_MedicalSpec
+-- Extracted by Fabric SQL Extractor SPN v3.9.0
+
+
+CREATE VIEW [Report].[DIM_MedicalSpec] as
+SELECT
+ CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY, 
+ CONVERT(int, LTRIM(RTRIM(ESP.CODESPECI))) [ID_ESPEC],
+ ESP.DESESPECI [NOM_ESPEC],
+  CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
+FROM
+ dbo.INESPECIA ESP
+UNION ALL
+SELECT
+   CAST(DB_NAME() AS VARCHAR(9)) AS ID_COMPANY, 
+  0, '[NO APLICA]',
+  CONVERT(DATETIME,GETDATE() AT TIME ZONE 'Pakistan Standard Time',1) AS ULT_ACTUAL
